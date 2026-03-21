@@ -1,0 +1,39 @@
+# API keys and secrets — NEVER commit these
+.env
+*.env
+.env.*
+
+# Flutter/Dart build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.keystore
+*.jks
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# Coverage
+coverage/
+
+# Dart pub cache
+.pub-cache/
+.pub/

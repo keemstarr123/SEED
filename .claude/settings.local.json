@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b \"c:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed\\\\lib\\\\theme\")",
+      "Bash(dir /b \"c:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed\\\\lib\\\\screens\")",
+      "Bash(dir /b \"c:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed\\\\lib\\\\widgets\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed\\\\lib'' -Recurse -Filter ''*.dart'' | Select-Object FullName\")",
+      "Bash(find . -name *.dart)",
+      "Bash(find /c/Users/haoho/Project/FYP_Flutter/seed -name *.dart)",
+      "Bash(python3 -c \"import os; files = []; [files.extend\\([os.path.join\\(r,f\\) for f in fs if f.endswith\\(''.dart''\\)]\\) for r,_,fs in os.walk\\(''C:/Users/haoho/Project/FYP_Flutter/seed/lib''\\)]; print\\(''\\\\n''.join\\(files\\)\\)\")",
+      "Bash(python3 -c \":*)",
+      "Bash(cmd.exe /c \"git -C C:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed log --oneline --all\")",
+      "Bash(cmd.exe /c \"git log --oneline --all && git ls-files lib\")",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git log --oneline --all)",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git ls-files \"FYP_Flutter/seed/lib/\")",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git show eb0b084 --stat)",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git show d5eb527 --stat)",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git stash list 2)",
+      "Bash(1 GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git stash show -p stash@{0} --stat)",
+      "Bash(cmd.exe /c \"dir /b C:\\\\Users\\\\haoho\\\\Project\\\\FYP_Flutter\\\\seed\"\")",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git log --oneline --all -- \"FYP_Flutter/\")",
+      "Bash(GIT_DIR=\"C:/Users/haoho/Project/.git\" GIT_WORK_TREE=\"C:/Users/haoho/Project\" git log --oneline --all -- \"*.dart\")",
+      "Bash(python3:*)",
+      "Bash(grep \"import ''package:seed/screens/\" \"c:/Users/haoho/Project/FYP_Flutter/seed/lib/screens/add_product_step3_screen.dart\")",
+      "Read(//dev/**)",
+      "Bash(SOURCE=/c/Users/haoho/Project/FYP_Flutter/seed/build/app/intermediates/assets/debug/mergeDebugAssets/flutter_assets/assets/images DEST=/c/Users/haoho/Project/FYP_Flutter/seed/assets/images __NEW_LINE_b100919e3b7082b4__ cp $SOURCE/Default_PFP.png $DEST/ cp $SOURCE/White_SEED_Logo.png $DEST/)",
+      "Bash(true __NEW_LINE_b100919e3b7082b4__ mkdir -p $DEST/Home_Page $DEST/Landing_Page $DEST/Login_Screen __NEW_LINE_b100919e3b7082b4__ cp $SOURCE/Home_Page/* $DEST/Home_Page/ cp $SOURCE/Landing_Page/* $DEST/Landing_Page/ cp $SOURCE/Login_Screen/* $DEST/Login_Screen/ __NEW_LINE_b100919e3b7082b4__ echo 'Done. Verifying:' find $DEST -type f)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\haoho\\Project\\FYP_Flutter\\seed\\lib\\theme"
+    ]
+  }
+}
