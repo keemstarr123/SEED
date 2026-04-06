@@ -15,7 +15,7 @@ class AiExtractionService {
 
   Future<auth.AuthClient> _getAuthClient() async {
     final jsonCredentials = await rootBundle.loadString(
-      'assets/GCPServiceAccount.json',
+      'assets/GCPServiceAccountKey.json',
     );
     final credentials = auth.ServiceAccountCredentials.fromJson(
       jsonCredentials,

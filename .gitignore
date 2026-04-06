@@ -2,6 +2,8 @@
 .env
 *.env
 .env.*
+assets/GCPServiceAccountKey.json
+*ServiceAccountKey.json
 
 # Flutter/Dart build artifacts
 build/

@@ -2,11 +2,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/screens/welcome_screen.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
 import 'package:seed/services/voice_assistant_service.dart';
+import 'package:seed/services/wake_word_service.dart';
 import 'package:seed/screens/voice_assistant_overlay.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -39,21 +41,41 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   StreamSubscription<VoiceAssistantState>? _voiceStateSub;
   OverlayEntry? _voiceOverlayEntry;
+  final WakeWordService _wakeWordService = WakeWordService();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startVoiceAssistant());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startVoiceAssistant();
+      _initWakeWord();
+    });
+  }
+
+  Future<void> _initWakeWord() async {
+    try {
+      await _wakeWordService.init(
+        onWakeWordDetected: () {
+          VoiceAssistantService().startListening(localeId: 'en-MY');
+        },
+      );
+      await _wakeWordService.startListening();
+    } catch (e) {
+      debugPrint('[WakeWordService] Init failed: $e');
+    }
   }
 
   void _startVoiceAssistant() {
-    VoiceAssistantService().startWakeWordListener();
-
     _voiceStateSub = VoiceAssistantService().stateStream.listen((state) {
-      if (state == VoiceAssistantState.orderListening ||
-          state == VoiceAssistantState.processing ||
+      if (state == VoiceAssistantState.orderListening) {
+        _wakeWordService.stopListening(); // release mic before STT
+        _showVoiceOverlay();
+      } else if (state == VoiceAssistantState.processing ||
           state == VoiceAssistantState.showingResult) {
         _showVoiceOverlay();
+      } else if (state == VoiceAssistantState.idle) {
+        _hideVoiceOverlay();
+        _wakeWordService.startListening(); // resume wake word after session ends
       }
     });
   }
@@ -75,18 +97,25 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     _voiceStateSub?.cancel();
     _voiceOverlayEntry?.remove();
-    VoiceAssistantService().stopAll(); // async, fire-and-forget on dispose
+    VoiceAssistantService().stopAll();
+    _wakeWordService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SEED',
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.themeData,
-      home: const WelcomeScreen(),
+    return ScreenUtilInit(
+      designSize: const Size(390, 844), // iPhone 14 base design size
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (_, child) => MaterialApp(
+        title: 'SEED',
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.themeData,
+        home: child,
+      ),
+      child: const WelcomeScreen(),
     );
   }
 }
@@ -111,8 +140,8 @@ class AppHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 40.w,
+          height: 40.w,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             image: DecorationImage(
@@ -121,7 +150,7 @@ class AppHeader extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12.w),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,42 +207,39 @@ class AppLayout extends StatelessWidget {
         onPressed: onFabPressed ?? () {},
         backgroundColor: Colors.black,
         shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
+        child: Icon(Icons.add, color: Colors.white, size: 32.sp),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        height: 45,
+        height: 56.h,
         shape: const CircularNotchedRectangle(),
         notchMargin: 3.0,
         color: Colors.white,
-        child: SizedBox(
-          height: 30,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.home, size: 28),
-                onPressed: () => onNavPressed?.call(0),
-                color: currentIndex == 0 ? Colors.black : Colors.grey,
-              ),
-              IconButton(
-                icon: const Icon(Icons.bar_chart, size: 28),
-                onPressed: () => onNavPressed?.call(1),
-                color: currentIndex == 1 ? Colors.black : Colors.grey,
-              ),
-              const SizedBox(width: 48), // Space for FAB
-              IconButton(
-                icon: const Icon(Icons.book, size: 28),
-                onPressed: () => onNavPressed?.call(2),
-                color: currentIndex == 2 ? Colors.black : Colors.grey,
-              ),
-              IconButton(
-                icon: const Icon(Icons.account_balance, size: 24),
-                onPressed: () => onNavPressed?.call(3),
-                color: currentIndex == 3 ? Colors.black : Colors.grey,
-              ),
-            ],
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.home, size: 28.sp),
+              onPressed: () => onNavPressed?.call(0),
+              color: currentIndex == 0 ? Colors.black : Colors.grey,
+            ),
+            IconButton(
+              icon: Icon(Icons.bar_chart, size: 28.sp),
+              onPressed: () => onNavPressed?.call(1),
+              color: currentIndex == 1 ? Colors.black : Colors.grey,
+            ),
+            SizedBox(width: 48.w), // Space for FAB
+            IconButton(
+              icon: Icon(Icons.book, size: 28.sp),
+              onPressed: () => onNavPressed?.call(2),
+              color: currentIndex == 2 ? Colors.black : Colors.grey,
+            ),
+            IconButton(
+              icon: Icon(Icons.account_balance, size: 24.sp),
+              onPressed: () => onNavPressed?.call(3),
+              color: currentIndex == 3 ? Colors.black : Colors.grey,
+            ),
+          ],
         ),
       ),
     );

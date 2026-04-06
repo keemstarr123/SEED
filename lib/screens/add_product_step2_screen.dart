@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:seed/screens/add_product_step3_screen.dart';
@@ -62,10 +63,10 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
         ),
         title: Text(
           widget.method == 'import' ? 'Import Products' : 'Add Product',
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 16.sp,
           ),
         ),
         centerTitle: true,
@@ -75,19 +76,19 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
           children: [
             // Progress Bar Area
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 8.0,
+              padding: EdgeInsets.symmetric(
+                horizontal: 24.w,
+                vertical: 8.h,
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text(
                         'Step 2 of 3',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           color: Colors.black87,
                           fontWeight: FontWeight.w500,
                         ),
@@ -95,23 +96,23 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                       Text(
                         '66%',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF38B6FF),
+                          fontSize: 12.sp,
+                          color: const Color(0xFF38B6FF),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: const LinearProgressIndicator(
+                    borderRadius: BorderRadius.circular(4.r),
+                    child: LinearProgressIndicator(
                       value: 0.66,
-                      backgroundColor: Color(0xFFE6E8F0),
-                      valueColor: AlwaysStoppedAnimation<Color>(
+                      backgroundColor: const Color(0xFFE6E8F0),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF38B6FF),
                       ),
-                      minHeight: 6,
+                      minHeight: 6.h,
                     ),
                   ),
                 ],
@@ -120,7 +121,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(24.w),
                 child: widget.method == 'import'
                     ? _buildImportView()
                     : _buildManualView(),
@@ -129,7 +130,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
 
             // Bottom Button Area
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.w),
               decoration: const BoxDecoration(color: Color(0xFFF8F9FE)),
               child: Row(
                 children: [
@@ -137,10 +138,10 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
                         side: BorderSide(color: Colors.grey.shade300),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
                       ),
                       child: const Text(
@@ -152,7 +153,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16.w),
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
@@ -202,24 +203,24 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF40BBFF),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
                         elevation: 0,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Text(
                             'Continue',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
+                          SizedBox(width: 8.w),
+                          Icon(Icons.arrow_forward, size: 20.sp),
                         ],
                       ),
                     ),
@@ -237,52 +238,53 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h),
         DottedBorder(
           options: RoundedRectDottedBorderOptions(
             color: const Color(0xFF38B6FF).withValues(alpha: 0.5),
+
             strokeWidth: 1.5,
             dashPattern: const [8, 4],
             radius: const Radius.circular(16),
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(8.w),
           ),
 
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+            padding: EdgeInsets.symmetric(vertical: 48.h, horizontal: 24.w),
             decoration: BoxDecoration(
               color: const Color(0xFFE2F4FD).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
             ),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16.w),
                   decoration: const BoxDecoration(
                     color: Color(0xFFD6EFFF),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.cloud_upload_rounded,
-                    color: Color(0xFF38B6FF),
-                    size: 32,
+                    color: const Color(0xFF38B6FF),
+                    size: 32.sp,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16.h),
+                Text(
                   'Drag & drop files here',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    color: const Color(0xFF1E293B),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8.h),
+                Text(
                   'Excel, CSV, or Image files supported',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24.h),
                 ElevatedButton.icon(
                   onPressed: () async {
                     final picker = ImagePicker();
@@ -360,7 +362,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                       }
                     }
                   },
-                  icon: const Icon(Icons.file_present_rounded, size: 18),
+                  icon: Icon(Icons.file_present_rounded, size: 18.sp),
                   label: const Text(
                     'Browse files',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -369,12 +371,12 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                     backgroundColor: const Color(0xFF38B6FF),
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24.w,
+                      vertical: 12.h,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
                   ),
                 ),
@@ -394,19 +396,19 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
           int index = entry.key;
           _ManualItemState itemState = entry.value;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 24.0),
+            padding: EdgeInsets.only(bottom: 24.h),
             child: _buildManualItemCard(index, itemState),
           );
         }).toList(),
 
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         // Add another item circular button
         Center(
           child: Column(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 50.w,
+                height: 50.h,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
@@ -429,29 +431,29 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                   },
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8.h),
+              Text(
                 'Add another item',
                 style: TextStyle(
-                  color: Color(0xFF38B6FF),
+                  color: const Color(0xFF38B6FF),
                   fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  fontSize: 13.sp,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h),
       ],
     );
   }
 
   Widget _buildManualItemCard(int index, _ManualItemState itemState) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -465,17 +467,17 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
             },
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.edit_note_rounded,
-                  color: Color(0xFF38B6FF),
-                  size: 20,
+                  color: const Color(0xFF38B6FF),
+                  size: 20.sp,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
                     'ITEM ${index + 1} DETAILS',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: TextStyle(
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
                       letterSpacing: 1.2,
@@ -492,7 +494,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
             ),
           ),
           if (itemState.isExpanded) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
 
             // Image Upload
             InkWell(
@@ -511,11 +513,11 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
               child: Row(
                 children: [
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 70.w,
+                    height: 70.h,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8F9FE),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(
                         color: Colors.grey.shade300,
                         style: BorderStyle.solid,
@@ -530,16 +532,16 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                     child: itemState.imageBytes == null
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
+                            children: [
+                              const Icon(
                                 Icons.add_photo_alternate_outlined,
                                 color: Colors.grey,
                               ),
-                              SizedBox(height: 4),
+                              SizedBox(height: 4.h),
                               Text(
                                 'Image',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 10.sp,
                                   color: Colors.grey,
                                 ),
                               ),
@@ -547,17 +549,17 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                           )
                         : null,
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
+                  SizedBox(width: 16.w),
+                  Expanded(
                     child: Text(
                       'Provide a clear image for this product (Optional).',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      style: TextStyle(color: Colors.grey, fontSize: 13.sp),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Product Name
             _buildTextField(
@@ -586,7 +588,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w),
                 // Keyword
                 Expanded(
                   child: _buildTextField(
@@ -607,18 +609,18 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
             ),
 
             // Category Section
-            const Text(
+            Text(
               'Category',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
+                color: const Color(0xFF1E293B),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 8.w,
+              runSpacing: 8.h,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ..._categories
@@ -652,45 +654,45 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                     .toList(),
                 if (itemState.isAddingNewCategory)
                   SizedBox(
-                    width: 200,
-                    height: 38,
+                    width: 200.w,
+                    height: 38.h,
                     child: TextField(
                       controller: itemState.newCategoryController,
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 14.sp),
                       decoration: InputDecoration(
                         hintText: 'Eg. Rice',
-                        hintStyle: const TextStyle(
-                          fontSize: 12,
+                        hintStyle: TextStyle(
+                          fontSize: 12.sp,
                           fontStyle: FontStyle.italic,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
                           vertical: 0,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                           borderSide: const BorderSide(
                             color: Color(0xFF38B6FF),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                           borderSide: const BorderSide(
                             color: Color(0xFF38B6FF),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                           borderSide: const BorderSide(
                             color: Color(0xFF38B6FF),
                             width: 2,
                           ),
                         ),
                         suffixIcon: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.check,
-                            size: 18,
-                            color: Color(0xFF38B6FF),
+                            size: 18.sp,
+                            color: const Color(0xFF38B6FF),
                           ),
                           onPressed: () {
                             if (itemState.newCategoryController.text
@@ -733,10 +735,10 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                   ActionChip(
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.add, size: 16, color: Colors.grey),
-                        SizedBox(width: 4),
-                        Text('Add New'),
+                      children: [
+                        Icon(Icons.add, size: 16.sp, color: Colors.grey),
+                        SizedBox(width: 4.w),
+                        const Text('Add New'),
                       ],
                     ),
                     backgroundColor: Colors.white,
@@ -753,7 +755,7 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
                   ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Description
             _buildTextField(
@@ -775,40 +777,40 @@ class _AddProductStep2ScreenState extends State<AddProductStep2Screen> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
+      padding: EdgeInsets.only(bottom: 24.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
+            style: TextStyle(
+              fontSize: 13.sp,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+              color: const Color(0xFF1E293B),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           TextField(
             controller: controller,
             maxLines: maxLines,
             keyboardType: keyboardType,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14.sp),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16.w,
+                vertical: 16.h,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
                 borderSide: const BorderSide(color: Color(0xFF38B6FF)),
               ),
             ),

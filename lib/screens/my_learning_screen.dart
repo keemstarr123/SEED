@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
@@ -225,9 +226,9 @@ class _MyLearningScreenState extends State<MyLearningScreen>
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 20,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 24.w,
+                  vertical: 20.h,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,13 +238,13 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                       subtitle: "Let's Learn,",
                       title: firstName,
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 6.h,
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20.r),
                           border: Border.all(color: const Color(0xFFFFCC80)),
                         ),
                         child: Row(
@@ -251,44 +252,44 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                           children: [
                             Text(
                               '$_streakDays',
-                              style: const TextStyle(
-                                fontSize: AppTheme.normalTextSize,
+                              style: TextStyle(
+                                fontSize: AppTheme.normalTextSize.sp,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFE65100),
+                                color: const Color(0xFFE65100),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Text('🔥', style: TextStyle(fontSize: 16)),
+                            SizedBox(width: 4.w),
+                            Text('🔥', style: TextStyle(fontSize: 16.sp)),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h),
 
                     // ── Important Materials ───────────────────────────────────
                     if (_mandatoryMaterials.isNotEmpty) ...[
                       Text(
                         'You have ${_mandatoryMaterials.length} important '
                         'material${_mandatoryMaterials.length > 1 ? 's' : ''}',
-                        style: const TextStyle(
-                          fontSize: AppTheme.normalTextSize,
+                        style: TextStyle(
+                          fontSize: AppTheme.normalTextSize.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
                       _buildStackedMaterials(),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
                     ],
 
                     // ── Courses ───────────────────────────────────────────────
-                    const Text(
+                    Text(
                       'Courses',
                       style: TextStyle(
-                        fontSize: AppTheme.normalTextSize,
+                        fontSize: AppTheme.normalTextSize.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     if (_courses.isEmpty)
                       _buildEmptyState(
                         Icons.menu_book_outlined,
@@ -296,7 +297,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                       )
                     else
                       SizedBox(
-                        height: 349,
+                        height: 349.h,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           clipBehavior: Clip.none,
@@ -305,19 +306,19 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                           itemBuilder: (_, i) => _buildCourseCard(_courses[i]),
                         ),
                       ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h),
 
                     // ── Your Statistics ───────────────────────────────────────
-                    const Text(
+                    Text(
                       'Your Statistics',
                       style: TextStyle(
-                        fontSize: AppTheme.normalTextSize,
+                        fontSize: AppTheme.normalTextSize.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     _buildStatisticsRow(),
-                    const SizedBox(height: 120),
+                    SizedBox(height: 120.h),
                   ],
                 ),
               ),
@@ -329,8 +330,8 @@ class _MyLearningScreenState extends State<MyLearningScreen>
   Widget _buildStackedMaterials() {
     if (_cardOrder.isEmpty) return const SizedBox.shrink();
 
-    const double cardHeight = 95.0;
-    const double stackPeek = 14.0;
+    final double cardHeight = 95.h;
+    final double stackPeek = 14.h;
     final int visible = _cardOrder.length.clamp(1, 3);
     final double totalHeight = cardHeight + (visible - 1) * stackPeek;
 
@@ -349,7 +350,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
     final bool isActive = depth == 0;
     final material = _mandatoryMaterials[_cardOrder[depth]];
     final double topOffset = depth * stackPeek;
-    final double hPad = depth * 10.0;
+    final double hPad = depth * 10.0.w;
     final double dimOpacity = (depth * 0.22).clamp(0.0, 0.55);
 
     if (isActive) {
@@ -376,7 +377,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
               final riseT = Curves.easeOutBack.transform(
                 _riseController?.value ?? 1.0,
               );
-              final riseHPad = _lerp(10.0, 0.0, riseT);
+              final riseHPad = _lerp(10.0.w, 0.0, riseT);
               final riseVOffset = _lerp(stackPeek, 0.0, riseT);
               final riseDim = _lerp(0.22, 0.0, riseT);
 
@@ -397,7 +398,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: riseDim),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16.r),
                               ),
                             ),
                         ],
@@ -427,7 +428,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
             Container(
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: dimOpacity),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
               ),
             ),
           ],
@@ -438,10 +439,10 @@ class _MyLearningScreenState extends State<MyLearningScreen>
 
   Widget _buildMaterialCardFlat(Map<String, dynamic> material) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
@@ -454,19 +455,19 @@ class _MyLearningScreenState extends State<MyLearningScreen>
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 48.w,
+            height: 48.h,
             decoration: BoxDecoration(
               color: const Color(0xFFEDE7F6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.menu_book_rounded,
-              color: Color(0xFF7E57C2),
-              size: 24,
+              color: const Color(0xFF7E57C2),
+              size: 24.sp,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,30 +477,30 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                 Text(
                   (material['moduleName'] as String?) ?? '',
                   style: TextStyle(
-                    fontSize: AppTheme.extraSmallTextSize,
+                    fontSize: AppTheme.extraSmallTextSize.sp,
                     color: Colors.grey[500],
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2.h),
                 // Middle: chapter name
                 Text(
                   (material['chapterName'] as String?) ?? '',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: AppTheme.smallTextSize,
+                    fontSize: AppTheme.smallTextSize.sp,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 // Bottom: last visit date
                 Text(
                   'Last visit: ${_formatDate(material['lastVisit'] as String?)}',
                   style: TextStyle(
-                    fontSize: AppTheme.extraSmallTextSize / 1.3,
+                    fontSize: (AppTheme.extraSmallTextSize / 1.3).sp,
                     color: Colors.grey[400],
                   ),
                 ),
@@ -528,24 +529,24 @@ class _MyLearningScreenState extends State<MyLearningScreen>
         ),
       ),
       child: Container(
-      width: 218,
-      height: 230,
-      margin: const EdgeInsets.only(right: 16),
+      width: 218.w,
+      height: 230.h,
+      margin: EdgeInsets.only(right: 16.w),
       child: Stack(
         fit: StackFit.expand,
         children: [
           // ── Lower layer: thumbnail background ──
           ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20.r),
             child: thumbnailUrl != null
                 ? Image.network(thumbnailUrl, fit: BoxFit.cover)
                 : Container(
                     color: Colors.grey[200],
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.play_circle_outline,
                         color: Colors.grey,
-                        size: 40,
+                        size: 40.sp,
                       ),
                     ),
                   ),
@@ -555,20 +556,20 @@ class _MyLearningScreenState extends State<MyLearningScreen>
           if (thumbnailUrl != null)
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(20.r),
                 color: Colors.white.withValues(alpha: 0.4),
               ),
             ),
 
           // ── Upper layer: floating info panel ──
           Positioned(
-            bottom: 12,
-            left: 12,
-            right: 12,
+            bottom: 12.h,
+            left: 12.w,
+            right: 12.w,
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.10),
@@ -583,24 +584,24 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                 children: [
                   Text(
                     course['title'] as String,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.smallTextSize,
+                      fontSize: AppTheme.smallTextSize.sp,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   Text(
                     course['subtitle'] as String,
                     style: TextStyle(
-                      fontSize: AppTheme.extraSmallTextSize,
+                      fontSize: AppTheme.extraSmallTextSize.sp,
                       color: Colors.black,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(4.r),
                     child: LinearProgressIndicator(
                       value: course['progress'] as double,
                       backgroundColor: Colors.grey[800],
@@ -608,11 +609,11 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                       minHeight: 3,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3.h),
                   Text(
                     course['progressText'] as String,
                     style: TextStyle(
-                      fontSize: AppTheme.extraSmallTextSize,
+                      fontSize: AppTheme.extraSmallTextSize.sp,
                       color: Colors.black,
                     ),
                   ),
@@ -629,7 +630,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
   // ── Statistics row ─────────────────────────────────────────────────────────
   Widget _buildStatisticsRow() {
     return SizedBox(
-      height: 90,
+      height: 90.h,
       child: ListView(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
@@ -637,58 +638,58 @@ class _MyLearningScreenState extends State<MyLearningScreen>
         children: [
           // ── Congratulations card ──
           Container(
-            width: 260,
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.all(16),
+            width: 260.w,
+            margin: EdgeInsets.only(right: 16.w),
+            padding: EdgeInsets.all(16.r),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF4DD0E1), Color(0xFF0097A7)],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: SizedBox(
-                    width: 300,
+                    width: 300.w,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text(
                           'Congratulations!',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: AppTheme.normalTextSize,
+                            fontSize: AppTheme.normalTextSize.sp,
                           ),
                         ),
-                        SizedBox(height: 6),
+                        SizedBox(height: 6.h),
                         Text(
                           'You best 60.7% of users with 360 minutes of learning this week!',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: AppTheme.extraSmallTextSize,
+                            fontSize: AppTheme.extraSmallTextSize.sp,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 44.w,
+                  height: 44.h,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.track_changes_rounded,
                     color: Colors.white,
-                    size: 26,
+                    size: 26.sp,
                   ),
                 ),
               ],
@@ -697,12 +698,12 @@ class _MyLearningScreenState extends State<MyLearningScreen>
 
           // ── Streak card ──
           Container(
-            width: 260,
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.all(16),
+            width: 260.w,
+            margin: EdgeInsets.only(right: 16.w),
+            padding: EdgeInsets.all(16.r),
             decoration: BoxDecoration(
               color: const Color(0xFFFFB74D),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               children: [
@@ -713,35 +714,35 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                     children: [
                       Text(
                         '$_streakDays-day streak',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: AppTheme.normalTextSize,
+                          fontSize: AppTheme.normalTextSize.sp,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
+                      SizedBox(height: 6.h),
+                      Text(
                         'Keep it up! You\'re on a roll.',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: AppTheme.extraSmallTextSize,
+                          fontSize: AppTheme.extraSmallTextSize.sp,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 44.w,
+                  height: 44.h,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.local_fire_department,
                     color: Colors.white,
-                    size: 26,
+                    size: 26.sp,
                   ),
                 ),
               ],
@@ -756,14 +757,14 @@ class _MyLearningScreenState extends State<MyLearningScreen>
   Widget _buildEmptyState(IconData icon, String message) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: EdgeInsets.symmetric(vertical: 32.h),
       child: Column(
         children: [
-          Icon(icon, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
+          Icon(icon, size: 48.sp, color: Colors.grey[300]),
+          SizedBox(height: 12.h),
           Text(
             message,
-            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            style: TextStyle(color: Colors.grey[400], fontSize: 13.sp),
           ),
         ],
       ),

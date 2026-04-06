@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:seed/main.dart';
 
 class OrderStatusScreen extends StatelessWidget {
@@ -19,13 +20,13 @@ class OrderStatusScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 96,
-                  height: 96,
+                  width: 96.w,
+                  height: 96.w,
                   decoration: BoxDecoration(
                     color: isSuccess
                         ? const Color(0xFFE8F5E9)
@@ -34,34 +35,34 @@ class OrderStatusScreen extends StatelessWidget {
                   ),
                   child: Icon(
                     isSuccess ? Icons.check_circle : Icons.cancel,
-                    size: 56,
+                    size: 56.sp,
                     color: isSuccess
                         ? const Color(0xFF4CAF50)
                         : const Color(0xFFE53935),
                   ),
                 ),
-                const SizedBox(height: 28),
+                SizedBox(height: 28.h),
                 Text(
                   isSuccess ? 'Order Placed!' : 'Order Failed',
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 Text(
                   isSuccess
                       ? 'Your order has been successfully submitted.'
                       : (errorMessage ?? 'Something went wrong. Please try again.'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.sp,
                     color: Colors.grey[600],
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: 40.h),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -70,16 +71,16 @@ class OrderStatusScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF40BBFF),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
                       elevation: 0,
                     ),
                     child: Text(
                       isSuccess ? 'Back to Home' : 'Try Again',
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

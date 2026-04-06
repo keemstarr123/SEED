@@ -36,14 +36,9 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin flutter_plugin_android_lifecycle, io.flutter.plugins.flutter_plugin_android_lifecycle.FlutterAndroidLifecyclePlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new xyz.canardoux.fluttersound.FlutterSound());
+      flutterEngine.getPlugins().add(new com.davoice.flutter_wake_word.FlutterWakeWordPlugin());
     } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin flutter_sound, xyz.canardoux.fluttersound.FlutterSound", e);
-    }
-    try {
-      flutterEngine.getPlugins().add(new ai.picovoice.flutter.voiceprocessor.FlutterVoiceProcessorPlugin());
-    } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin flutter_voice_processor, ai.picovoice.flutter.voiceprocessor.FlutterVoiceProcessorPlugin", e);
+      Log.e(TAG, "Error registering plugin flutter_wake_word, com.davoice.flutter_wake_word.FlutterWakeWordPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new io.flutter.plugins.imagepicker.ImagePickerPlugin());
@@ -61,9 +56,9 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin permission_handler_android, com.baseflow.permissionhandler.PermissionHandlerPlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new ai.picovoice.flutter.porcupine.PorcupinePlugin());
+      flutterEngine.getPlugins().add(new net.nfet.flutter.printing.PrintingPlugin());
     } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin porcupine_flutter, ai.picovoice.flutter.porcupine.PorcupinePlugin", e);
+      Log.e(TAG, "Error registering plugin printing, net.nfet.flutter.printing.PrintingPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new io.flutter.plugins.sharedpreferences.SharedPreferencesPlugin());

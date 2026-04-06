@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
 
 class SeedLogoHeader extends StatelessWidget {
@@ -7,16 +8,15 @@ class SeedLogoHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 350,
-      width: 350,
+      height: 320.w,
+      width: 320.w,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Concentric Circles
           for (int i = 0; i < 3; i++)
             Container(
-              width: 140.0 + (i * 95),
-              height: 140.0 + (i * 95),
+              width: (120.0 + (i * 80)).w,
+              height: (120.0 + (i * 80)).w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.9 - (i * 0.3)),
@@ -26,14 +26,13 @@ class SeedLogoHeader extends StatelessWidget {
                 ),
               ),
             ),
-          // Center Item
           Container(
-            width: 85,
-            height: 85,
+            width: 80.w,
+            height: 80.w,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Colors.black87,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(15.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.7),
@@ -42,20 +41,18 @@ class SeedLogoHeader extends StatelessWidget {
                 ),
               ],
             ),
-            // Placeholder icon for center illustration
             child: Image.asset(
               'assets/images/Landing_Page/Landing_Page_Main_Icon.png',
-              width: 60,
-              height: 60,
+              width: 55.w,
+              height: 55.w,
             ),
           ),
-
-          // Surrounding Icons (Fixed)
           LayoutBuilder(
             builder: (context, constraints) {
-              double radius = 120.0;
+              double radius = constraints.maxWidth * 0.35;
               double centerX = constraints.maxWidth / 2;
               double centerY = constraints.maxHeight / 2;
+              double iconSize = constraints.maxWidth * 0.17;
 
               return Stack(
                 children: [
@@ -64,24 +61,21 @@ class SeedLogoHeader extends StatelessWidget {
                       builder: (context) {
                         double angle = (210 + (i * 60)) * (math.pi / 180);
                         List<double> rotateAngle = [6, -4, 2, -10, 5, -5];
-                        // Ensure index is within bounds for rotateAngle list
-                        double currentRotateAngle = i < rotateAngle.length
-                            ? rotateAngle[i]
-                            : 0;
+                        double currentRotateAngle = i < rotateAngle.length ? rotateAngle[i] : 0;
 
                         return Positioned(
-                          left: centerX + radius * math.cos(angle) - 30,
-                          top: centerY + radius * math.sin(angle) - 30,
+                          left: centerX + radius * math.cos(angle) - iconSize / 2,
+                          top: centerY + radius * math.sin(angle) - iconSize / 2,
                           child: Transform.rotate(
                             angle: currentRotateAngle * (math.pi / 180),
                             child: Container(
-                              width: 60,
-                              height: 60,
+                              width: iconSize,
+                              height: iconSize,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: const Color(0xFFBEBEBE),
                                 shape: BoxShape.rectangle,
-                                borderRadius: BorderRadius.circular(15),
+                                borderRadius: BorderRadius.circular(15.r),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.25),
@@ -90,17 +84,12 @@ class SeedLogoHeader extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Image.asset(
-                                  'assets/images/Landing_Page/Landing_Page_Icon_${i + 1}.png',
-                                  width: 60,
-                                  height: 60,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(
-                                        Icons.error,
-                                        color: Colors.red,
-                                      ),
-                                ),
+                              child: Image.asset(
+                                'assets/images/Landing_Page/Landing_Page_Icon_${i + 1}.png',
+                                width: iconSize,
+                                height: iconSize,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.error, color: Colors.red),
                               ),
                             ),
                           ),

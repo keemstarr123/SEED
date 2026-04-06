@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/main.dart'; // For AppLayout
 import 'package:seed/screens/order_status_screen.dart';
@@ -88,20 +89,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _buildHeader(context),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 24),
-                      const Text(
+                      SizedBox(height: 24.h),
+                      Text(
                         'New Order',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16.h),
                       // List of Items
                       ListView.builder(
                         shrinkWrap: true,
@@ -112,19 +113,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         },
                       ),
                       if (cartProducts.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40.h),
                           child: Center(
                             child: Text(
                               'Cart is empty',
                               style: TextStyle(
                                 color: Colors.grey,
-                                fontSize: 16,
+                                fontSize: 16.sp,
                               ),
                             ),
                           ),
                         ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
@@ -132,11 +133,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               // Bottom Section (Summary + Button)
               if (cartProducts.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.only(
-                    left: 24.0,
-                    right: 24.0,
-                    top: 16.0,
-                    bottom: 110.0, // Breathing space over navbar
+                  padding: EdgeInsets.only(
+                    left: 24.w,
+                    right: 24.w,
+                    top: 16.h,
+                    bottom: 110.h, // Breathing space over navbar
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F9FE), // Same as app background
@@ -151,38 +152,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: EdgeInsets.all(20.r),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(color: Colors.grey.shade300),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildSummaryRow('Total Items', itemsTotal),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12.h),
                             _buildSummaryRow('SST (6%)', sst),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12.h),
                             _buildSummaryRow('Discount', discount),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12.h),
                             const Divider(color: Colors.grey),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12.h),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Total Payment',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black87,
                                   ),
                                 ),
                                 Text(
                                   'RM${totalPayment.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black87,
                                   ),
@@ -192,7 +193,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -310,17 +311,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF40BBFF),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                             elevation: 0,
                           ),
                           child: _isProcessing
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
+                              ? SizedBox(
+                                  height: 20.h,
+                                  width: 20.w,
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       Colors.white,
@@ -331,8 +332,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   widget.orderIdToUpdate != null
                                       ? 'Update Order'
                                       : 'Confirm Order',
-                                  style: const TextStyle(
-                                    fontSize: 16,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1,
                                   ),
@@ -355,16 +356,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: 12.sp,
             color: Colors.grey,
             fontWeight: FontWeight.w500,
           ),
         ),
         Text(
           'RM${amount.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: 12.sp,
             color: Colors.black87,
             fontWeight: FontWeight.w600,
           ),
@@ -386,24 +387,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final qty = _cart[productId] ?? 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(8.r),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
           // Image Box
           Container(
-            width: 60,
-            height: 60,
+            width: 60.w,
+            height: 60.h,
             decoration: BoxDecoration(
               color: const Color(
                 0xFFFFB284,
               ), // Light orange background behind image
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
               image: imageUrl != null
                   ? DecorationImage(
                       image: NetworkImage(imageUrl),
@@ -415,7 +416,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ? const Icon(Icons.fastfood, color: Colors.white54)
                 : null,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           // Info Column
           Expanded(
             child: Column(
@@ -424,14 +425,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               children: [
                 Text(
                   catName,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: TextStyle(fontSize: 10.sp, color: Colors.grey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2.h),
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppTheme.smallTextSize,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -439,11 +440,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   'RM ${price.toStringAsFixed(2)}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 12.sp,
                     color: Colors.grey.shade700,
                     fontWeight: FontWeight.w500,
                   ),
@@ -455,7 +456,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Container(
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -463,25 +464,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 InkWell(
                   onTap: () => _updateCart(productId, -1),
                   child: Container(
-                    margin: const EdgeInsets.all(4),
-                    padding: const EdgeInsets.all(4),
+                    margin: EdgeInsets.all(4.r),
+                    padding: EdgeInsets.all(4.r),
                     decoration: const BoxDecoration(
                       color: Colors.black,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.remove,
                       color: Colors.white,
-                      size: 14,
+                      size: 14.sp,
                     ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
                   child: Text(
                     '$qty',
-                    style: const TextStyle(
-                      fontSize: 12,
+                    style: TextStyle(
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -490,13 +491,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 InkWell(
                   onTap: () => _updateCart(productId, 1),
                   child: Container(
-                    margin: const EdgeInsets.all(4),
-                    padding: const EdgeInsets.all(4),
+                    margin: EdgeInsets.all(4.r),
+                    padding: EdgeInsets.all(4.r),
                     decoration: const BoxDecoration(
                       color: Colors.black,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 14),
+                    child: Icon(Icons.add, color: Colors.white, size: 14.sp),
                   ),
                 ),
               ],
@@ -509,42 +510,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context, _cart),
             child: Container(
-              width: 36,
-              height: 36,
+              width: 36.w,
+              height: 36.h,
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.05),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_ios_new,
                 color: Colors.black87,
-                size: 18,
+                size: 18.sp,
               ),
             ),
           ),
-          const Text(
+          Text(
             'Check Out',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 18.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
           Container(
-            width: 36,
-            height: 36,
+            width: 36.w,
+            height: 36.h,
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.more_vert, color: Colors.black87, size: 20),
+            child: Icon(Icons.more_vert, color: Colors.black87, size: 20.sp),
           ),
         ],
       ),

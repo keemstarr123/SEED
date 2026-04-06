@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
+import 'package:seed/services/voice_assistant_service.dart';
 import 'package:seed/screens/add_product_screen.dart';
 import 'package:seed/screens/make_order_screen.dart';
 import 'package:seed/screens/pending_orders_screen.dart';
 import 'package:seed/screens/completed_orders_screen.dart';
+import 'package:seed/screens/loan/loan_explore_screen.dart';
 import 'package:seed/main.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -72,6 +75,21 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  void _onNavPressed(int i) {
+    if (i == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoanExploreScreen()),
+      );
+      return;
+    }
+    setState(() => _currentIndex = i);
+  }
+
+  void _onVoiceFabPressed() {
+    VoiceAssistantService().startListening(localeId: 'en-MY');
+  }
+
   Future<void> _checkProductsAndNavigate() async {
     showDialog(
       context: context,
@@ -123,16 +141,16 @@ class _HomePageState extends State<HomePage> {
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(16.r),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(24.w),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 90,
-                  height: 90,
+                  width: 90.w,
+                  height: 90.h,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -144,46 +162,46 @@ class _HomePageState extends State<HomePage> {
                     child: Transform.rotate(
                       angle: -0.15,
                       child: Container(
-                        width: 50,
-                        height: 50,
+                        width: 50.w,
+                        height: 50.h,
                         decoration: BoxDecoration(
                           color: const Color(0xFFE2F4FD),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.inventory_2_rounded,
-                          color: Color(0xFF38B6FF),
-                          size: 32,
+                          color: const Color(0xFF38B6FF),
+                          size: 32.sp,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16.h),
+                Text(
                   'No product found',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    color: const Color(0xFF1E293B),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8.h),
+                Text(
                   'Do you want to add a product first?',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24.h),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF40BBFF),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
                       elevation: 0,
                     ),
@@ -202,15 +220,15 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey[600],
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                         side: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
@@ -235,12 +253,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return AppLayout(
       currentIndex: _currentIndex,
-      onNavPressed: (i) => setState(() => _currentIndex = i),
-      onFabPressed: _checkProductsAndNavigate,
+      onNavPressed: _onNavPressed,
+      onFabPressed: _onVoiceFabPressed,
       backgroundColor: const Color(0xFFF8F9FE), // Light background color
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(24.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -248,8 +266,8 @@ class _HomePageState extends State<HomePage> {
               Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 40.w,
+                    height: 40.h,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       image: DecorationImage(
@@ -258,21 +276,21 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12.w),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Welcome back! 👋',
                         style: TextStyle(
-                          fontSize: AppTheme.extraSmallTextSize,
+                          fontSize: AppTheme.extraSmallTextSize.sp,
                           color: Colors.grey[600],
                         ),
                       ),
                       Text(
                         UserService().currentOwnerName,
-                        style: const TextStyle(
-                          fontSize: AppTheme.smallTextSize,
+                        style: TextStyle(
+                          fontSize: AppTheme.smallTextSize.sp,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
@@ -281,18 +299,18 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const Spacer(),
                   Container(
-                    width: 40,
-                    padding: const EdgeInsets.all(0),
-                    height: 40,
+                    width: 40.w,
+                    padding: EdgeInsets.all(0),
+                    height: 40.h,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.grey[200],
                     ),
                     alignment: Alignment.center,
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.notifications_outlined,
-                        size: AppTheme.largeTextSize,
+                        size: AppTheme.largeTextSize.sp,
                       ),
                       color: Colors.black,
                       onPressed: () {},
@@ -300,20 +318,20 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24.h),
 
               // Make an Order Banner
               SizedBox(
-                height: 240,
+                height: 240.h,
                 child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.bottomCenter,
                   children: [
                     // Blue Card Background
                     Container(
-                      height: 189,
+                      height: 189.h,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(32.r),
                         gradient: const LinearGradient(
                           colors: [Color(0xFF81D4FA), Color(0xFF29B6F6)],
                           begin: Alignment.topLeft,
@@ -329,7 +347,7 @@ class _HomePageState extends State<HomePage> {
                       right: 0,
                       child: Image.asset(
                         'assets/images/Home_Page/Order_Chef_Deco.png',
-                        height: 180,
+                        height: 180.h,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -339,13 +357,13 @@ class _HomePageState extends State<HomePage> {
                       left: 24,
                       right: 24,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20.w,
+                          vertical: 16.h,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(24.r),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -353,34 +371,34 @@ class _HomePageState extends State<HomePage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Make an order',
                                   style: TextStyle(
-                                    fontSize: AppTheme.normalTextSize,
+                                    fontSize: AppTheme.normalTextSize.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4.h),
                                 Text(
                                   'Lorem Ipsum',
                                   style: TextStyle(
-                                    fontSize: AppTheme.extraSmallTextSize,
+                                    fontSize: AppTheme.extraSmallTextSize.sp,
                                     color: Colors.grey[500],
                                   ),
                                 ),
                               ],
                             ),
                             Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFCCBC), // Peach/Orange
+                              width: 30.w,
+                              height: 30.h,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFCCBC), // Peach/Orange
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.arrow_forward,
-                                  size: AppTheme.normalTextSize,
+                                  size: AppTheme.normalTextSize.sp,
                                   weight: 800,
                                 ),
                                 color: Colors.black,
@@ -394,24 +412,24 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
 
               // Orders Section
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Orders',
                     style: TextStyle(
-                      fontSize: AppTheme.normalTextSize,
+                      fontSize: AppTheme.normalTextSize.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w),
                   // Decorative dots or icon if needed
-                  Icon(Icons.auto_awesome, size: 16, color: Colors.amber),
+                  Icon(Icons.auto_awesome, size: 16.sp, color: Colors.amber),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8.h),
               Row(
                 children: [
                   // Pending Card
@@ -426,10 +444,10 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(16.w),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20.r),
                           border: Border.all(color: Colors.grey.shade100),
                         ),
                         child: Column(
@@ -439,56 +457,56 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: EdgeInsets.all(6.w),
                                   decoration: BoxDecoration(
                                     color: const Color(
                                       0xFFE1BEE7,
                                     ), // Light Purple
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(8.r),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.hourglass_empty,
-                                    size: 16,
+                                    size: 16.sp,
                                     color: Colors.purple,
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.remove_red_eye_outlined,
                                   color: Colors.grey,
-                                  size: 16,
+                                  size: 16.sp,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8.h),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                const Text(
+                                Text(
                                   'Pending',
                                   style: TextStyle(
                                     color: Colors.grey,
-                                    fontSize: 12,
+                                    fontSize: 12.sp,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4.h),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                const Text(
+                                Text(
                                   '5',
                                   style: TextStyle(
-                                    fontSize: AppTheme.largeTextSize,
+                                    fontSize: AppTheme.largeTextSize.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
+                                SizedBox(width: 8.w),
+                                Text(
                                   '~ 30 items',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 12.sp,
                                     color: Colors.grey,
                                   ),
                                 ),
@@ -499,7 +517,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16.w),
                   // Completed Card
                   Expanded(
                     child: GestureDetector(
@@ -512,10 +530,10 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(16.w),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20.r),
                           border: Border.all(color: Colors.grey.shade100),
                         ),
                         child: Column(
@@ -525,39 +543,39 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: EdgeInsets.all(6.w),
                                   decoration: BoxDecoration(
                                     color: const Color(
                                       0xFFB3E5FC,
                                     ), // Light Blue
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(8.r),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.check,
-                                    size: 16,
+                                    size: 16.sp,
                                     color: Colors.blue,
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.remove_red_eye_outlined,
                                   color: Colors.grey,
-                                  size: 16,
+                                  size: 16.sp,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
+                            SizedBox(height: 8.h),
+                            Text(
                               'Completed',
                               style: TextStyle(
                                 color: Colors.grey,
-                                fontSize: 12,
+                                fontSize: 12.sp,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
+                            SizedBox(height: 4.h),
+                            Text(
                               '15',
                               style: TextStyle(
-                                fontSize: AppTheme.largeTextSize,
+                                fontSize: AppTheme.largeTextSize.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -568,19 +586,19 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
 
               // Quick Access
-              const Text(
+              Text(
                 'Quick Access',
                 style: TextStyle(
-                  fontSize: AppTheme.normalTextSize,
+                  fontSize: AppTheme.normalTextSize.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
               SizedBox(
-                height: 240,
+                height: 240.h,
                 child: PageView.builder(
                   clipBehavior: Clip.none,
                   controller: _quickAccessController,
@@ -597,21 +615,33 @@ class _HomePageState extends State<HomePage> {
                       offset: Offset(0, -15 * activeFactor), // Active is higher
                       child: Transform.scale(
                         scale: 0.9 + (0.1 * activeFactor), // Active is larger
-                        child: _buildQuickAccessCard(
-                          title: item['title'],
-                          subtitle: item['subtitle'],
-                          progress: item['progress'],
-                          time: item['time'],
-                          color: item['color'],
-                          icon: item['icon'],
-                          imagePath: item['imagePath'],
+                        child: GestureDetector(
+                          onTap: () {
+                            if (item['title'] == 'Browsing Loan') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoanExploreScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          child: _buildQuickAccessCard(
+                            title: item['title'],
+                            subtitle: item['subtitle'],
+                            progress: item['progress'],
+                            time: item['time'],
+                            color: item['color'],
+                            icon: item['icon'],
+                            imagePath: item['imagePath'],
+                          ),
                         ),
                       ),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 120), // Space for FAB
+              SizedBox(height: 120.h), // Space for FAB
             ],
           ),
         ),
@@ -629,21 +659,21 @@ class _HomePageState extends State<HomePage> {
     required String imagePath,
   }) {
     return Container(
-      margin: const EdgeInsets.only(right: 16),
+      margin: EdgeInsets.only(right: 16.w),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24.r),
         border: Border.all(color: color),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(4.0),
+        padding: EdgeInsets.all(4.w),
         child: Row(
           children: [
             // Left Image Section
             Container(
-              width: 120,
+              width: 120.w,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(color: color),
                 image: DecorationImage(
                   image: AssetImage(imagePath),
@@ -654,7 +684,7 @@ class _HomePageState extends State<HomePage> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -663,27 +693,27 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: EdgeInsets.all(6.w),
                           decoration: BoxDecoration(
                             color: color,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(8.r),
                           ),
-                          child: Icon(icon, size: 16, color: Colors.white),
+                          child: Icon(icon, size: 16.sp, color: Colors.white),
                         ),
                         const Icon(Icons.more_horiz, color: Colors.grey),
                       ],
                     ),
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 14.sp,
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontSize: 10.sp,
                         color: Colors.black87,
                       ),
                       maxLines: 2,
@@ -691,31 +721,31 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.check_circle_outline,
-                          size: 14,
+                          size: 14.sp,
                           color: Colors.grey,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4.w),
                         Text(
                           progress,
-                          style: const TextStyle(
-                            fontSize: 10,
+                          style: TextStyle(
+                            fontSize: 10.sp,
                             color: Colors.grey,
                           ),
                         ),
                         if (time.isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          const Icon(
+                          SizedBox(width: 12.w),
+                          Icon(
                             Icons.timer_outlined,
-                            size: 14,
+                            size: 14.sp,
                             color: Colors.grey,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4.w),
                           Text(
                             time,
-                            style: const TextStyle(
-                              fontSize: 10,
+                            style: TextStyle(
+                              fontSize: 10.sp,
                               color: Colors.grey,
                             ),
                           ),
@@ -724,16 +754,16 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
                           'Last Visit:',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 10.sp,
                             fontStyle: FontStyle.italic,
                             color: Colors.grey,
                           ),
                         ),
-                        Icon(Icons.arrow_outward, size: 16),
+                        Icon(Icons.arrow_outward, size: 16.sp),
                       ],
                     ),
                   ],

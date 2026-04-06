@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:seed/theme/app_theme.dart';
 
 class QuizModal extends StatefulWidget {
@@ -79,64 +80,63 @@ class _QuizModalState extends State<QuizModal>
     ];
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 24.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // ── Header ─────────────────────────────────────────────────────
             Row(
               children: [
-                const Icon(Icons.arrow_back, color: _purple, size: 20),
-                const Expanded(
+                Icon(Icons.arrow_back, color: _purple, size: 20.sp),
+                Expanded(
                   child: Text(
                     'QUIZ ROUND',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _purple,
                       fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.smallTextSize,
+                      fontSize: AppTheme.smallTextSize.sp,
                       letterSpacing: 1.5,
                     ),
                   ),
                 ),
-                const Icon(Icons.bookmark_border, color: _purple, size: 20),
+                Icon(Icons.bookmark_border, color: _purple, size: 20.sp),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18.h),
 
             // ── Question card ───────────────────────────────────────────────
             SlideTransition(
               position: _shakeAnimation,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 22.h),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF7E57C2), Color(0xFFAB47BC)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(18.r),
                 ),
                 child: Column(
                   children: [
                     Text(
                       '${widget.questionNumber} / ${widget.totalQuestions}',
-                      style: const TextStyle(
-                          color: Colors.white60, fontSize: 11),
+                      style: TextStyle(color: Colors.white60, fontSize: 11.sp),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     Text(
                       widget.quizItem['question'] as String? ?? '',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: AppTheme.normalTextSize,
+                        fontSize: AppTheme.normalTextSize.sp,
                         height: 1.4,
                       ),
                     ),
@@ -144,7 +144,7 @@ class _QuizModalState extends State<QuizModal>
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20.h),
 
             // ── Options ─────────────────────────────────────────────────────
             ...options.map(((String, String) opt) {
@@ -160,24 +160,21 @@ class _QuizModalState extends State<QuizModal>
                 }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
+                  margin: EdgeInsets.only(bottom: 10.h),
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
                   decoration: BoxDecoration(
                     color: isSelected ? _purpleLight : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                     border: Border.all(
-                      color:
-                          isSelected ? _purple : const Color(0xFFE0E0E0),
+                      color: isSelected ? _purple : const Color(0xFFE0E0E0),
                       width: isSelected ? 1.5 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
-                      // Letter bubble
                       Container(
-                        width: 28,
-                        height: 28,
+                        width: 28.w,
+                        height: 28.w,
                         decoration: BoxDecoration(
                           color: isSelected ? _purple : const Color(0xFFF5F5F5),
                           shape: BoxShape.circle,
@@ -188,27 +185,25 @@ class _QuizModalState extends State<QuizModal>
                             style: TextStyle(
                               color: isSelected ? Colors.white : Colors.grey[600],
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 12.sp,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12.w),
                       Expanded(
                         child: Text(
                           text,
                           style: TextStyle(
                             color: Colors.black87,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            fontSize: AppTheme.smallTextSize,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontSize: AppTheme.smallTextSize.sp,
                           ),
                         ),
                       ),
                       Container(
-                        width: 22,
-                        height: 22,
+                        width: 22.w,
+                        height: 22.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -218,8 +213,7 @@ class _QuizModalState extends State<QuizModal>
                           color: isSelected ? _purple : Colors.transparent,
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 13)
+                            ? Icon(Icons.check, color: Colors.white, size: 13.sp)
                             : null,
                       ),
                     ],
@@ -236,24 +230,22 @@ class _QuizModalState extends State<QuizModal>
                   : CrossFadeState.showSecond,
               firstChild: Container(
                 width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
+                margin: EdgeInsets.only(bottom: 12.h),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(color: Colors.red.shade200),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.cancel_outlined,
-                        color: Colors.red.shade400, size: 18),
-                    const SizedBox(width: 8),
+                    Icon(Icons.cancel_outlined, color: Colors.red.shade400, size: 18.sp),
+                    SizedBox(width: 8.w),
                     Text(
                       'Incorrect! Please try again.',
                       style: TextStyle(
                         color: Colors.red.shade600,
-                        fontSize: AppTheme.extraSmallTextSize,
+                        fontSize: AppTheme.extraSmallTextSize.sp,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -270,9 +262,9 @@ class _QuizModalState extends State<QuizModal>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _selected != null ? Colors.black : Colors.grey[300],
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(30.r),
                   ),
                   elevation: 0,
                 ),

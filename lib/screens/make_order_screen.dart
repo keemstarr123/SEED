@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/services/user_service.dart';
@@ -144,9 +145,9 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                   child: Column(
                     children: [
                       _buildHeader(),
-                      const SizedBox(height: 50),
+                      SizedBox(height: 50.h),
                       _buildCategories(),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16.h),
                       Expanded(child: _buildProductsList()),
                     ],
                   ),
@@ -154,8 +155,8 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                 if (_cart.isNotEmpty)
                   Positioned(
                     bottom: 100, // Above bottom nav slightly higher than FAB
-                    left: 20,
-                    right: 20,
+                    left: 20.w,
+                    right: 20.w,
                     child: _buildCartSummary(),
                   ),
               ],
@@ -168,8 +169,8 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          height: 169,
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 50),
+          height: 169.h,
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 50.h),
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(15),
@@ -188,18 +189,18 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'What the customer want\nto order?',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 22.sp,
                   fontWeight: FontWeight.w900,
                   color: Colors.black87,
                   height: 1.2,
                 ),
               ),
               Container(
-                width: 36,
-                height: 36,
+                width: 36.w,
+                height: 36.h,
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.05),
                   shape: BoxShape.circle,
@@ -211,13 +212,13 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
         ),
         Positioned(
           bottom: -24,
-          left: 24,
-          right: 24,
+          left: 24.w,
+          right: 24.w,
           child: Container(
-            height: 50,
+            height: 50.h,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(24.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -237,26 +238,26 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                 hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(24.r),
                   borderSide: BorderSide(
                     color: Colors.black.withValues(alpha: 0.2),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(24.r),
                   borderSide: BorderSide(
                     color: Colors.black.withValues(alpha: 0.2),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(24.r),
                   borderSide: BorderSide(
                     color: Colors.black.withValues(alpha: 0.2),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 20.w,
+                  vertical: 14.h,
                 ),
               ),
             ),
@@ -279,9 +280,9 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
     }
 
     return SizedBox(
-      height: 80,
+      height: 80.h,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
         scrollDirection: Axis.horizontal,
         itemCount: allCats.length,
         itemBuilder: (context, index) {
@@ -296,12 +297,12 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
           return GestureDetector(
             onTap: () => setState(() => _selectedCategory = cat),
             child: Padding(
-              padding: const EdgeInsets.only(right: 24),
+              padding: EdgeInsets.only(right: 24.w),
               child: Column(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 50.w,
+                    height: 50.h,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
@@ -313,14 +314,14 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                     child: Icon(
                       iconData,
                       color: isSelected ? Colors.black : Colors.grey,
-                      size: 24,
+                      size: 24.sp,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Text(
                     cat,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.sp,
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -340,7 +341,7 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
     final list = _filteredProducts;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -350,24 +351,24 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
             children: [
               Text(
                 _selectedCategory,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(
+                  fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8.w),
               Text(
                 'Total ${list.length} results.',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12.sp, color: Colors.grey),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           Expanded(
             child: GridView.builder(
-              padding: const EdgeInsets.only(
-                bottom: 160,
+              padding: EdgeInsets.only(
+                bottom: 160.h,
               ), // Extra padding for cart and bottom nav
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -403,7 +404,7 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
@@ -419,7 +420,7 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
             Expanded(
               flex: 3,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(8.r),
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -437,10 +438,10 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                   child: Stack(
                     children: [
                       if (imageUrl == null)
-                        const Center(
+                        Center(
                           child: Icon(
                             Icons.fastfood,
-                            size: 40,
+                            size: 40.sp,
                             color: Colors.white54,
                           ),
                         ),
@@ -448,20 +449,20 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                         top: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Text(
                             'RM${price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 10,
+                            style: TextStyle(
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF9800),
+                              color: const Color(0xFFFF9800),
                             ),
                           ),
                         ),
@@ -475,11 +476,11 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 10.0,
-                  right: 10.0,
-                  top: 4.0,
-                  bottom: 10.0,
+                padding: EdgeInsets.only(
+                  left: 10.w,
+                  right: 10.w,
+                  top: 4.h,
+                  bottom: 10.h,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +491,7 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                       children: [
                         Text(
                           name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: AppTheme.smallTextSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -498,11 +499,11 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2.h),
                         Text(
                           catName,
-                          style: const TextStyle(
-                            fontSize: 10,
+                          style: TextStyle(
+                            fontSize: 10.sp,
                             color: Colors.grey,
                           ),
                           maxLines: 1,
@@ -519,44 +520,44 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.black,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(20.r),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     InkWell(
                                       onTap: () => _updateCart(productId, -1),
-                                      child: const Padding(
+                                      child: Padding(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
+                                          horizontal: 8.w,
+                                          vertical: 4.h,
                                         ),
                                         child: Icon(
                                           Icons.remove,
                                           color: Colors.white,
-                                          size: 16,
+                                          size: 16.sp,
                                         ),
                                       ),
                                     ),
                                     Text(
                                       '$qty',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 12,
+                                        fontSize: 12.sp,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     InkWell(
                                       onTap: () => _updateCart(productId, 1),
-                                      child: const Padding(
+                                      child: Padding(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
+                                          horizontal: 8.w,
+                                          vertical: 4.h,
                                         ),
                                         child: Icon(
                                           Icons.add,
                                           color: Colors.white,
-                                          size: 16,
+                                          size: 16.sp,
                                         ),
                                       ),
                                     ),
@@ -565,15 +566,15 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
                               ),
                             )
                           : Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: EdgeInsets.all(4.r),
                               decoration: const BoxDecoration(
                                 color: Colors.black,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add,
                                 color: Colors.white,
-                                size: 18,
+                                size: 18.sp,
                               ),
                             ),
                     ),
@@ -609,10 +610,10 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: const Color(0xFF333333),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
@@ -626,9 +627,9 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
           children: [
             Text(
               '$_totalCartItems Items selected',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -636,23 +637,23 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
               children: [
                 Text(
                   'RM${_totalCartPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8.r),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFB284), // Peach/orange
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.shopping_cart_outlined,
                     color: Colors.black,
-                    size: 20,
+                    size: 20.sp,
                   ),
                 ),
               ],

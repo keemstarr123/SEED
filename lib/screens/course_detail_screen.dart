@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
@@ -113,10 +114,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   Widget _iconBubble(IconData icon, Color bg, Color iconColor) {
     return Container(
-      width: 32,
-      height: 32,
+      width: 32.w,
+      height: 32.h,
       decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-      child: Icon(icon, color: iconColor, size: 18),
+      child: Icon(icon, color: iconColor, size: 18.sp),
     );
   }
 
@@ -137,18 +138,18 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
               child: AppHeader(
                 subtitle: 'Course',
                 title: UserService().currentOwnerName.split(' ').first,
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                     border: Border.all(color: const Color(0xFFFFCC80)),
                   ),
                   child: Row(
@@ -156,14 +157,14 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     children: [
                       Text(
                         '${widget.streakDays}',
-                        style: const TextStyle(
-                          fontSize: AppTheme.normalTextSize,
+                        style: TextStyle(
+                          fontSize: AppTheme.normalTextSize.sp,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFE65100),
+                          color: const Color(0xFFE65100),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Text('🔥', style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 4.w),
+                      Text('🔥', style: TextStyle(fontSize: 16.sp)),
                     ],
                   ),
                 ),
@@ -173,19 +174,19 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
           // ── Back button + module title ───────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 24, 4),
+            padding: EdgeInsets.fromLTRB(8.w, 10.h, 24.w, 4.h),
             child: Row(
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
                     widget.moduleName,
-                    style: const TextStyle(
-                      fontSize: AppTheme.largeTextSize,
+                    style: TextStyle(
+                      fontSize: AppTheme.largeTextSize.sp,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 2,
@@ -203,7 +204,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 : _chapters.isEmpty
                 ? const Center(child: Text('No chapters available'))
                 : ListView.builder(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(20.r),
                     itemCount: _chapters.length,
                     itemBuilder: (_, i) => _buildChapterCard(_chapters[i], i),
                   ),
@@ -223,10 +224,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     final statusColor = _statusColor(chapterId);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -236,18 +237,18 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20.r),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── Colored left accent strip ──
-            Container(width: 5, color: statusColor),
+            Container(width: 5.w, color: statusColor),
 
             // ── Card content ──
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: EdgeInsets.all(18.r),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -261,18 +262,18 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   children: [
                     Text(
                       chapter['name'] as String? ?? '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
-                        fontSize: AppTheme.normalTextSize,
+                        fontSize: AppTheme.normalTextSize.sp,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       'Chapter $sequenceNumber',
                       style: TextStyle(
                         color: Colors.grey[500],
-                        fontSize: AppTheme.extraSmallTextSize,
+                        fontSize: AppTheme.extraSmallTextSize.sp,
                       ),
                     ),
                   ],
@@ -281,49 +282,49 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               _statusIcon(chapterId),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
 
           // ── Language + Duration ──
           Row(
             children: [
-              Icon(Icons.language, color: Colors.grey[400], size: 14),
-              const SizedBox(width: 4),
+              Icon(Icons.language, color: Colors.grey[400], size: 14.sp),
+              SizedBox(width: 4.w),
               Text(
                 'English',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
               ),
-              const SizedBox(width: 16),
-              Icon(Icons.access_time, color: Colors.grey[400], size: 14),
-              const SizedBox(width: 4),
+              SizedBox(width: 16.w),
+              Icon(Icons.access_time, color: Colors.grey[400], size: 14.sp),
+              SizedBox(width: 4.w),
               Text(
                 '$duration minutes',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.h),
 
           // ── Progress ──
           Row(
             children: [
               Text(
                 'Current Progress',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
               ),
               const Spacer(),
               Text(
                 '${pct.toInt()}%',
                 style: TextStyle(
                   color: statusColor,
-                  fontSize: 11,
+                  fontSize: 11.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6.h),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(4.r),
             child: LinearProgressIndicator(
               value: pct / 100.0,
               backgroundColor: Colors.grey[200],
@@ -331,7 +332,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               minHeight: 5,
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.h),
 
           // ── Watch button ──
           SizedBox(
@@ -340,9 +341,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 12.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(30.r),
                 ),
                 elevation: 0,
               ),
@@ -368,8 +369,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               },
               child: Text(
                 _buttonLabel(chapterId),
-                style: const TextStyle(
-                  fontSize: AppTheme.smallTextSize,
+                style: TextStyle(
+                  fontSize: AppTheme.smallTextSize.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),            // closes Text

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:seed/screens/add_product_step2_screen.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -22,12 +23,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Add a Product',
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 16.sp,
           ),
         ),
         centerTitle: true,
@@ -37,19 +38,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
           children: [
             // Progress Bar Area
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 8.0,
+              padding: EdgeInsets.symmetric(
+                horizontal: 24.w,
+                vertical: 8.h,
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text(
                         'Step 1 of 3',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           color: Colors.black87,
                           fontWeight: FontWeight.w500,
                         ),
@@ -57,23 +58,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       Text(
                         '33%',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF38B6FF),
+                          fontSize: 12.sp,
+                          color: const Color(0xFF38B6FF),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: const LinearProgressIndicator(
+                    borderRadius: BorderRadius.circular(4.r),
+                    child: LinearProgressIndicator(
                       value: 0.33,
-                      backgroundColor: Color(0xFFE6E8F0),
-                      valueColor: AlwaysStoppedAnimation<Color>(
+                      backgroundColor: const Color(0xFFE6E8F0),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF38B6FF),
                       ),
-                      minHeight: 6,
+                      minHeight: 6.h,
                     ),
                   ),
                 ],
@@ -82,28 +83,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(24.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Add a Product',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 24.sp,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
+                        color: const Color(0xFF1E293B),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8.h),
+                    Text(
                       'Choose how you want to add your\nproduct',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 15.sp,
                         color: Colors.grey,
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
 
                     // Manual Entry Card
                     _buildOptionCard(
@@ -114,7 +115,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       isSelected: _selectedMethod == 'manual',
                       onTap: () => setState(() => _selectedMethod = 'manual'),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
 
                     // Import Card
                     _buildOptionCard(
@@ -126,22 +127,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       isSelected: _selectedMethod == 'import',
                       onTap: () => setState(() => _selectedMethod = 'import'),
                       child: Container(
-                        margin: const EdgeInsets.only(top: 16),
-                        height: 140,
+                        margin: EdgeInsets.only(top: 16.h),
+                        height: 140.h,
                         decoration: BoxDecoration(
                           color: const Color(0xFF5A8B76),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Center(
                           child: Container(
-                            width: 100,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 8,
+                            width: 100.w,
+                            padding: EdgeInsets.symmetric(
+                              vertical: 8.h,
+                              horizontal: 8.w,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(2),
+                              borderRadius: BorderRadius.circular(2.r),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.1),
@@ -153,23 +154,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text(
+                                Text(
                                   'Inventory',
                                   style: TextStyle(
-                                    fontSize: 8,
+                                    fontSize: 8.sp,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                SizedBox(height: 6.h),
                                 ...List.generate(
                                   10,
                                   (index) => Container(
-                                    height: 3,
+                                    height: 3.h,
                                     color: index == 0
                                         ? Colors.grey[400]
                                         : Colors.grey[200],
-                                    margin: const EdgeInsets.only(bottom: 4),
+                                    margin: EdgeInsets.only(bottom: 4.h),
                                   ),
                                 ),
                               ],
@@ -185,7 +186,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
             // Bottom Button Area
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24.w),
               decoration: const BoxDecoration(color: Color(0xFFF8F9FE)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -205,32 +206,32 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF40BBFF),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.r),
                         ),
                         elevation: 0,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Text(
                             'Continue',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
+                          SizedBox(width: 8.w),
+                          Icon(Icons.arrow_forward, size: 20.sp),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  SizedBox(height: 16.h),
+                  Text(
                     'You can always go back and change your choice later.',
-                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                    style: TextStyle(color: Colors.grey, fontSize: 11.sp),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -256,10 +257,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
             color: isSelected ? const Color(0xFF38B6FF) : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
@@ -287,14 +288,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
               children: [
                 // Icon Box
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE2F4FD),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
-                  child: Icon(icon, color: const Color(0xFF38B6FF), size: 24),
+                  child: Icon(icon, color: const Color(0xFF38B6FF), size: 24.sp),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w),
 
                 // Text Column
                 Expanded(
@@ -305,28 +306,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
+                              color: const Color(0xFF1E293B),
                             ),
                           ),
                           if (isRecommended) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8.w),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6.w,
+                                vertical: 2.h,
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE2F4FD),
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(4.r),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'RECOMMENDED',
                                 style: TextStyle(
-                                  color: Color(0xFF38B6FF),
-                                  fontSize: 8,
+                                  color: const Color(0xFF38B6FF),
+                                  fontSize: 8.sp,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -334,11 +335,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4.h),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 13.sp,
                           color: Colors.grey,
                         ),
                       ),
@@ -348,8 +349,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                 // Radio Button Equivalent
                 Container(
-                  width: 24,
-                  height: 24,
+                  width: 24.w,
+                  height: 24.h,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(

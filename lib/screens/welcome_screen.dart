@@ -4,6 +4,7 @@ import 'package:seed/theme/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui' as ui;
 import 'package:seed/widgets/seed_logo_header.dart'; // Make sure this is kept!
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -69,13 +70,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   // Header
                   if (!_isLoginOpen)
                     Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: EdgeInsets.all(24.w),
                       child: Row(
                         children: [
                           Image.asset(
                             'assets/images/White_SEED_Logo.png',
-                            width: 150,
-                            height: 50,
+                            width: 150.w,
+                            height: 50.h,
                             semanticLabel: 'SEED Logo',
                           ),
                         ],
@@ -95,7 +96,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   // Text Content
                   if (!_isLoginOpen) ...[
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      padding: EdgeInsets.symmetric(horizontal: 32.w),
                       child: Column(
                         children: [
                           Text(
@@ -107,7 +108,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   color: Colors.black87,
                                 ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -121,15 +122,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       color: Colors.black87,
                                     ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8.w),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 4.h,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(20.r),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.05),
@@ -139,12 +140,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.eco,
-                                      color: Color(0xFFFFCC80),
-                                      size: 20,
+                                      color: const Color(0xFFFFCC80),
+                                      size: 20.sp,
                                     ),
-                                    const SizedBox(width: 4),
+                                    SizedBox(width: 4.w),
                                     Text(
                                       'SEED',
                                       style: Theme.of(context)
@@ -159,7 +160,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24.h),
                           Text(
                             'Leverage AI to transform your business, where financing, ordering, and insights are always just a few clicks away.',
                             textAlign: TextAlign.center,
@@ -169,28 +170,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
 
                     // Page Indicators
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildPageIndicator(true),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8.w),
                         _buildPageIndicator(false),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8.w),
                         _buildPageIndicator(false),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32.h),
                   ],
 
                   // Get Started Button
                   if (!_isLoginOpen)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32.0,
-                        vertical: 24,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 32.w,
+                        vertical: 24.h,
                       ),
                       child: SizedBox(
                         width: double.infinity,
@@ -231,11 +232,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   Widget _buildPageIndicator(bool isActive) {
     return Container(
-      width: isActive ? 32 : 32,
-      height: 4,
+      width: isActive ? 32.w : 32.w,
+      height: 4.h,
       decoration: BoxDecoration(
         color: isActive ? Colors.black45 : Colors.black12,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(2.r),
       ),
     );
   }
@@ -248,11 +249,11 @@ class _IconCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 60,
-      height: 60,
+      width: 60.w,
+      height: 60.h,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
         ],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
@@ -356,26 +357,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           color: Colors.black,
           child: Stack(
             children: [
-              const Center(
+              Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.video_library_outlined,
                       color: Colors.white38,
-                      size: 56,
+                      size: 56.sp,
                     ),
-                    SizedBox(height: 12),
+                    SizedBox(height: 12.h),
                     Text(
                       'No video available',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                      style: TextStyle(color: Colors.white54, fontSize: 14.sp),
                     ),
                   ],
                 ),
               ),
               Positioned(
-                top: 8,
-                left: 4,
+                top: 8.h,
+                left: 4.w,
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.pop(context),
@@ -407,23 +408,23 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _buildChapterInfo() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 10.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             widget.chapterName,
-            style: const TextStyle(
-              fontSize: AppTheme.largeTextSize,
+            style: TextStyle(
+              fontSize: AppTheme.largeTextSize.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.h),
           Text(
             'Chapter ${widget.sequenceNumber}',
             style: TextStyle(
               color: Colors.grey[500],
-              fontSize: AppTheme.extraSmallTextSize,
+              fontSize: AppTheme.extraSmallTextSize.sp,
             ),
           ),
         ],
@@ -435,12 +436,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _buildActionBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 36.w,
+            height: 36.h,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               image: DecorationImage(
@@ -449,13 +450,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10.w),
           Expanded(
             child: Text(
               widget.moduleName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: AppTheme.smallTextSize,
+                fontSize: AppTheme.smallTextSize.sp,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -471,13 +472,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Widget _actionButton(IconData icon, String label) {
     return Padding(
-      padding: const EdgeInsets.only(left: 12),
+      padding: EdgeInsets.only(left: 12.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 22, color: Colors.grey[700]),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+          Icon(icon, size: 22.sp, color: Colors.grey[700]),
+          SizedBox(height: 2.h),
+          Text(label, style: TextStyle(fontSize: 9.sp, color: Colors.grey[600])),
         ],
       ),
     );
@@ -489,44 +490,44 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final desc = widget.summary;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Video Summary',
             style: TextStyle(
-              fontSize: AppTheme.largeTextSize,
+              fontSize: AppTheme.largeTextSize.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.h),
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16.r),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FE),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(14.r),
                 border: Border.all(color: const Color(0xFFEEEEEE)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Overview',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.smallTextSize,
+                      fontSize: AppTheme.smallTextSize.sp,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Text(
                         desc ?? 'No summary available.',
                         style: TextStyle(
-                          fontSize: AppTheme.extraSmallTextSize,
+                          fontSize: AppTheme.extraSmallTextSize.sp,
                           color: Colors.grey[700],
                           height: 1.6,
                         ),
