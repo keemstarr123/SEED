@@ -245,108 +245,267 @@ class PdfGenerator {
     return doc.save();
   }
 
-  // Document 4 — e-Invoice Summary
-  static Future<Uint8List> generateEInvoiceSummary(
-      List<Map<String, dynamic>> rows) async {
+  // Document 4 — e-Invoices (one page per order)
+  static Future<Uint8List> generateEInvoices(
+    List<Map<String, dynamic>> orders,
+    Map<String, dynamic> business,
+  ) async {
     await _loadFonts();
     final doc = pw.Document(theme: _theme());
     final fmt = NumberFormat('#,##0.00');
     final dateFmt = DateFormat('dd/MM/yyyy');
+    final timeFmt = DateFormat('hh:mm a');
 
-    doc.addPage(
-      pw.MultiPage(
-        header: (_) => _buildHeader('e-Invoice Summary'),
-        footer: (_) => _buildFooter(),
-        build: (context) {
-          if (rows.isEmpty) {
-            return [
-              pw.SizedBox(height: 40),
-              pw.Center(
-                child: pw.Text(
-                  'No transaction data available for this period.',
-                  style: const pw.TextStyle(
-                      fontSize: 12, color: PdfColors.grey600),
-                ),
-              ),
-            ];
-          }
+    if (orders.isEmpty) {
+      doc.addPage(
+        pw.Page(
+          build: (_) => pw.Center(
+            child: pw.Text(
+              'No transaction data available for this period.',
+              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+            ),
+          ),
+        ),
+      );
+      return doc.save();
+    }
 
-          double grandTotal = 0;
-          for (final r in rows) {
-            grandTotal += (r['total_amount'] as num).toDouble();
-          }
+    final businessName = (business['business_name'] ?? 'Business').toString();
+    final businessAddress = (business['business_address'] ?? '').toString();
+    final contactNumber = (business['contact_number'] ?? '').toString();
+    final ssmNo = (business['ssm_registration_number'] ?? '').toString();
 
-          return [
-            _buildSectionHeader('e-Invoice Summary — Last 3 Months'),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(2),
-                1: const pw.FlexColumnWidth(2),
-                2: const pw.FlexColumnWidth(1),
-                3: const pw.FlexColumnWidth(2),
-                4: const pw.FlexColumnWidth(1.5),
-              },
+    for (int idx = 0; idx < orders.length; idx++) {
+      final order = orders[idx];
+      final orderId = (order['id'] as String).substring(0, 8).toUpperCase();
+      final invoiceNo = 'INV-$orderId';
+      final createdAt = DateTime.parse(order['created_at'] as String).toLocal();
+      final dateStr = dateFmt.format(createdAt);
+      final timeStr = timeFmt.format(createdAt);
+      final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+      final items = (order['items'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 36),
+          build: (ctx) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  children: ['Invoice ID', 'Date', 'Items', 'Amount (RM)', 'Status']
-                      .map((h) => pw.Padding(
-                            padding: const pw.EdgeInsets.all(6),
-                            child: pw.Text(h,
-                                style: pw.TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: pw.FontWeight.bold)),
-                          ))
-                      .toList(),
-                ),
-                ...rows.asMap().entries.map((entry) {
-                  final isEven = entry.key.isEven;
-                  final r = entry.value;
-                  final id = (r['id'] as String).substring(0, 8).toUpperCase();
-                  final date = dateFmt
-                      .format(DateTime.parse(r['created_at'] as String));
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: isEven ? PdfColors.grey100 : PdfColors.white,
-                    ),
-                    children: [
-                      id,
-                      date,
-                      '${r['item_count']}',
-                      'RM ${fmt.format((r['total_amount'] as num).toDouble())}',
-                      '${r['transaction_status'] ?? '-'}',
-                    ]
-                        .map((v) => pw.Padding(
-                              padding: const pw.EdgeInsets.all(6),
-                              child: pw.Text(v,
-                                  style: const pw.TextStyle(fontSize: 9)),
-                            ))
-                        .toList(),
-                  );
-                }),
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                // ── Business Header ──────────────────────────────────────
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    'GRAND TOTAL', '', '',
-                    'RM ${fmt.format(grandTotal)}', '',
-                  ]
-                      .map((v) => pw.Padding(
-                            padding: const pw.EdgeInsets.all(6),
-                            child: pw.Text(v,
-                                style: pw.TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: pw.FontWeight.bold)),
-                          ))
-                      .toList(),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            businessName,
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          if (ssmNo.isNotEmpty)
+                            pw.Text(
+                              '(SSM: $ssmNo)',
+                              style: const pw.TextStyle(
+                                  fontSize: 9, color: PdfColors.grey700),
+                            ),
+                          if (businessAddress.isNotEmpty) ...[
+                            pw.SizedBox(height: 4),
+                            pw.Text(businessAddress,
+                                style: const pw.TextStyle(
+                                    fontSize: 9, color: PdfColors.grey700)),
+                          ],
+                          if (contactNumber.isNotEmpty)
+                            pw.Text('Tel: $contactNumber',
+                                style: const pw.TextStyle(
+                                    fontSize: 9, color: PdfColors.grey700)),
+                        ],
+                      ),
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'TAX INVOICE',
+                          style: pw.TextStyle(
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                        pw.SizedBox(height: 6),
+                        _invoiceDetailRow('Invoice No', invoiceNo),
+                        _invoiceDetailRow('Date', dateStr),
+                        _invoiceDetailRow('Time', timeStr),
+                        _invoiceDetailRow(
+                            'Page', '${idx + 1} of ${orders.length}'),
+                      ],
+                    ),
+                  ],
+                ),
+
+                pw.SizedBox(height: 16),
+                pw.Divider(thickness: 1.5, color: PdfColors.grey400),
+                pw.SizedBox(height: 12),
+
+                // ── Bill To ──────────────────────────────────────────────
+                pw.Text('Bill To:',
+                    style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey700)),
+                pw.Text('Walk-in Customer',
+                    style: const pw.TextStyle(fontSize: 10)),
+                pw.SizedBox(height: 16),
+
+                // ── Items Table ──────────────────────────────────────────
+                pw.Table(
+                  border: pw.TableBorder.all(
+                      color: PdfColors.grey300, width: 0.5),
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(28),   // No
+                    1: const pw.FlexColumnWidth(4),     // Description
+                    2: const pw.FixedColumnWidth(38),   // Qty
+                    3: const pw.FixedColumnWidth(62),   // Unit Price
+                    4: const pw.FixedColumnWidth(70),   // Amount
+                  },
+                  children: [
+                    // Header row
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey200),
+                      children: [
+                        'No',
+                        'Description',
+                        'Qty',
+                        'Unit Price (RM)',
+                        'Amount (RM)',
+                      ]
+                          .map((h) => pw.Padding(
+                                padding: const pw.EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 5),
+                                child: pw.Text(h,
+                                    style: pw.TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: pw.FontWeight.bold)),
+                              ))
+                          .toList(),
+                    ),
+                    // Item rows
+                    ...items.asMap().entries.map((e) {
+                      final i = e.key;
+                      final item = e.value;
+                      return pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: i.isEven
+                              ? PdfColors.white
+                              : PdfColors.grey50,
+                        ),
+                        children: [
+                          '${i + 1}',
+                          item['name'].toString(),
+                          item['qty'].toString(),
+                          fmt.format(
+                              (item['unit_price'] as num).toDouble()),
+                          fmt.format(
+                              (item['subtotal'] as num).toDouble()),
+                        ]
+                            .map((v) => pw.Padding(
+                                  padding: const pw.EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 5),
+                                  child: pw.Text(v,
+                                      style:
+                                          const pw.TextStyle(fontSize: 9)),
+                                ))
+                            .toList(),
+                      );
+                    }),
+                  ],
+                ),
+
+                pw.SizedBox(height: 16),
+
+                // ── Totals ───────────────────────────────────────────────
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.SizedBox(
+                    width: 220,
+                    child: pw.Column(
+                      children: [
+                        _totalRow('Subtotal', fmt.format(totalAmount)),
+                        _totalRow('SST (0%)', '0.00'),
+                        pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+                        _totalRow(
+                          'Total Payable (RM)',
+                          fmt.format(totalAmount),
+                          isBold: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                pw.Spacer(),
+
+                // ── Footer ───────────────────────────────────────────────
+                pw.Divider(thickness: 0.5, color: PdfColors.grey300),
+                pw.Text(
+                  'Generated by SEED Platform — For loan application purposes only.',
+                  style: const pw.TextStyle(
+                      fontSize: 7, color: PdfColors.grey500),
                 ),
               ],
-            ),
-          ];
-        },
+            );
+          },
+        ),
+      );
+    }
+
+    return doc.save();
+  }
+
+  static pw.Widget _invoiceDetailRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 2),
+      child: pw.Row(
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          pw.SizedBox(
+            width: 68,
+            child: pw.Text(label,
+                style: const pw.TextStyle(
+                    fontSize: 9, color: PdfColors.grey700)),
+          ),
+          pw.Text(': ',
+              style: const pw.TextStyle(
+                  fontSize: 9, color: PdfColors.grey700)),
+          pw.Text(value, style: const pw.TextStyle(fontSize: 9)),
+        ],
       ),
     );
-    return doc.save();
+  }
+
+  static pw.Widget _totalRow(String label, String value,
+      {bool isBold = false}) {
+    final style = isBold
+        ? pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)
+        : const pw.TextStyle(fontSize: 9, color: PdfColors.grey700);
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label, style: style),
+          pw.Text(value, style: style),
+        ],
+      ),
+    );
   }
 
   // Document 5 — Activity Log

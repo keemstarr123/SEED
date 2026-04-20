@@ -89,7 +89,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     const SizedBox.shrink(),
 
                   // Circular Illustrations Placeholder
-                  const SeedLogoHeader(),
+                  SeedLogoHeader(compact: _isLoginOpen),
 
                   const Spacer(),
 
@@ -206,9 +206,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               backgroundColor: Colors.transparent,
                               barrierColor: Colors
                                   .transparent, // Keeps the background visible
-                              builder: (context) => SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.55,
+                              builder: (context) => ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight:
+                                      MediaQuery.of(context).size.height * 0.60,
+                                ),
                                 child: const LoginScreen(),
                               ),
                             ).whenComplete(() {

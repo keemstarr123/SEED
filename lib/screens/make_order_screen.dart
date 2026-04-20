@@ -26,6 +26,12 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
   // Cart state: map of productId -> quantity
   Map<String, int> _cart = {};
 
+  // Cached filtered products — only recomputed when inputs change
+  List<Map<String, dynamic>>? _cachedFilteredProducts;
+  String _cachedCategory = '';
+  String _cachedQuery = '';
+  int _cachedProductsLength = -1;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +58,8 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
 
       setState(() {
         _products = List<Map<String, dynamic>>.from(productsRes);
+        _priceCache = null;
+        _cachedFilteredProducts = null;
         _isLoading = false;
       });
     } catch (e) {
@@ -75,39 +83,52 @@ class _MakeOrderScreenState extends State<MakeOrderScreen> {
   }
 
   List<Map<String, dynamic>> get _filteredProducts {
-    return _products.where((p) {
+    if (_cachedFilteredProducts != null &&
+        _cachedCategory == _selectedCategory &&
+        _cachedQuery == _searchQuery &&
+        _cachedProductsLength == _products.length) {
+      return _cachedFilteredProducts!;
+    }
+    final queryLower = _searchQuery.toLowerCase();
+    _cachedFilteredProducts = _products.where((p) {
       final matchesSearch =
           _searchQuery.isEmpty ||
-          (p['name']?.toString().toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ) ??
-              false);
+          (p['name']?.toString().toLowerCase().contains(queryLower) ?? false);
 
-      String catName = 'General';
-      if (p['categories'] != null && p['categories']['name'] != null) {
-        catName = p['categories']['name'];
-      }
+      final catName = (p['categories'] != null && p['categories']['name'] != null)
+          ? p['categories']['name'] as String
+          : 'General';
       final matchesCategory =
           _selectedCategory == 'All' || catName == _selectedCategory;
 
       return matchesSearch && matchesCategory;
     }).toList();
+    _cachedCategory = _selectedCategory;
+    _cachedQuery = _searchQuery;
+    _cachedProductsLength = _products.length;
+    return _cachedFilteredProducts!;
   }
 
   int get _totalCartItems {
     return _cart.values.fold(0, (sum, item) => sum + item);
   }
 
-  double get _totalCartPrice {
-    double total = 0.0;
-    for (var entry in _cart.entries) {
-      final product = _products.firstWhere(
-        (p) => p['id'].toString() == entry.key,
-      );
-      final price = (product['unit_price'] as num?)?.toDouble() ?? 0.0;
-      total += price * entry.value;
+  // Lazy price lookup map — built once from _products
+  Map<String, double>? _priceCache;
+
+  Map<String, double> get _priceMap {
+    if (_priceCache == null || _priceCache!.length != _products.length) {
+      _priceCache = {
+        for (final p in _products)
+          p['id'].toString(): (p['unit_price'] as num?)?.toDouble() ?? 0.0,
+      };
     }
-    return total;
+    return _priceCache!;
+  }
+
+  double get _totalCartPrice {
+    final prices = _priceMap;
+    return _cart.entries.fold(0.0, (sum, e) => sum + (prices[e.key] ?? 0.0) * e.value);
   }
 
   void _updateCart(String productId, int delta) {

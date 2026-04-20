@@ -71,6 +71,11 @@ class _VoiceAssistantOverlayState extends State<VoiceAssistantOverlay>
       if (state == VoiceAssistantState.showingResult) {
         final result = _service.lastResult;
         if (result != null) setState(() => _cart = Map.from(result.cart));
+      } else if (state == VoiceAssistantState.orderListening) {
+        setState(() {
+          _transcript = '';
+          _cart = {};
+        });
       } else if (state == VoiceAssistantState.idle) {
         widget.onDismiss();
       }
@@ -568,7 +573,7 @@ class _VoiceAssistantOverlayState extends State<VoiceAssistantOverlay>
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: cartProducts.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     const Divider(height: 1, color: Color(0xFFF5F5F5)),
                 itemBuilder: (_, index) => _buildOrderItem(cartProducts[index]),
               ),

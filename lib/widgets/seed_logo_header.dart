@@ -3,20 +3,25 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
 
 class SeedLogoHeader extends StatelessWidget {
-  const SeedLogoHeader({super.key});
+  final bool compact;
+  const SeedLogoHeader({super.key, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
+    final double containerSize = compact ? 260.0 : 320.0;
+    final double baseCircle = compact ? 96.0 : 120.0;
+    final double circleStep = compact ? 64.0 : 80.0;
+
     return SizedBox(
-      height: 320.w,
-      width: 320.w,
+      height: containerSize.w,
+      width: containerSize.w,
       child: Stack(
         alignment: Alignment.center,
         children: [
           for (int i = 0; i < 3; i++)
             Container(
-              width: (120.0 + (i * 80)).w,
-              height: (120.0 + (i * 80)).w,
+              width: (baseCircle + (i * circleStep)).w,
+              height: (baseCircle + (i * circleStep)).w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.9 - (i * 0.3)),

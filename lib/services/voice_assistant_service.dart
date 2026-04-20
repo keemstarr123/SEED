@@ -86,12 +86,14 @@ class VoiceAssistantService {
     _isModifying = false;
     _modifyCart = {};
     _modifyProducts = [];
+    _lastResult = null;
     _accumulatedText = '';
     _previousText = '';
     _sessionText = '';
     _resolvedLocaleId = null;
     _sessionToken++;
     _cancelTimers();
+    _transcriptController.add(''); // clear transcript display on new session
     _setState(VoiceAssistantState.orderListening);
     await Future.delayed(const Duration(milliseconds: 200));
     await _startOrderListening();
@@ -129,7 +131,7 @@ class VoiceAssistantService {
     _sessionText = '';
     _sessionToken++;
     _cancelTimers();
-    await _speech.stop();
+    await _speech.cancel();
     await Future.delayed(const Duration(milliseconds: 600));
     _isRestarting = false;
     _setState(VoiceAssistantState.orderListening);
@@ -162,6 +164,7 @@ class VoiceAssistantService {
     _isModifying = true;
     _modifyCart = Map.from(currentCart);
     _modifyProducts = List.from(allProducts);
+    _lastResult = null;
     _orderCaptured = false;
     _hasSpeech = false;
     _accumulatedText = '';
@@ -169,6 +172,7 @@ class VoiceAssistantService {
     _sessionText = '';
     _sessionToken++;
     _cancelTimers();
+    _transcriptController.add('');
     _setState(VoiceAssistantState.orderListening);
     await Future.delayed(const Duration(milliseconds: 200));
     await _startOrderListening();
@@ -177,7 +181,11 @@ class VoiceAssistantService {
   // ── STT init ──────────────────────────────────────────────────────────────
 
   Future<bool> _initStt() async {
-    if (_sttInitialized) return true;
+    if (_sttInitialized && _speech.isAvailable) return true;
+    // Reset flag — native side may be stale (e.g. after hot restart)
+    _sttInitialized = false;
+    try { await _speech.stop(); } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 200));
     _sttInitialized = await _speech.initialize(
       debugLogging: true,
       onError: (e) {
@@ -189,6 +197,7 @@ class VoiceAssistantService {
           'error_speech_timeout',
           'error_no_match',
           'error_client',
+          'error_network',
         ];
         if (restartableErrors.contains(e.errorMsg)) {
           // Save accumulated text before restart so next session can append to it
@@ -220,54 +229,21 @@ class VoiceAssistantService {
       return;
     }
 
-    // Resolve locale once per session, reuse on restarts
     if (_resolvedLocaleId == null) {
-      final locales = await _speech.locales();
-      debugPrint(
-        '[STT] Available locales (${locales.length}): ${locales.map((l) => '${l.localeId}(${l.name})').join(', ')}',
-      );
-
-      final localeIds = locales.map((l) => l.localeId).toSet();
-
-      // Build candidate list — selected locale first, then fallbacks
-      final candidates = <String>[
-        if (_selectedLocaleId != null) ...[
-          _selectedLocaleId!,
-          _selectedLocaleId!.replaceAll('-', '_'),
-          _selectedLocaleId!.replaceAll('_', '-'),
-        ],
-        'en-MY', 'en_MY', 'en-SG', 'en_SG', 'en-US', 'en_US',
-      ];
-
-      String? resolved;
-      for (final c in candidates) {
-        if (localeIds.contains(c)) {
-          resolved = c.replaceAll('_', '-');
-          break;
-        }
-      }
-      // Last resort: any English locale
-      resolved ??= locales
-          .where((l) => l.localeId.toLowerCase().startsWith('en'))
-          .firstOrNull
-          ?.localeId
-          .replaceAll('_', '-');
-      // Absolute fallback: first available locale
-      resolved ??= locales.firstOrNull?.localeId.replaceAll('_', '-');
-
-      _resolvedLocaleId = resolved;
+      // Use the selected locale directly — online recognition (onDevice: false)
+      // handles all locales without needing offline packs installed.
+      _resolvedLocaleId = _selectedLocaleId ?? 'en-MY';
       debugPrint('[STT] Chosen locale: $_resolvedLocaleId');
     }
 
     final isMalay = _resolvedLocaleId?.startsWith('ms') ?? false;
 
-    _listenSessionToken = _sessionToken; // bind result callbacks to this session
+    _listenSessionToken =
+        _sessionToken; // bind result callbacks to this session
     _speech.listen(
       onResult: _onSpeechResult,
       listenFor: const Duration(seconds: 60),
-      pauseFor: isMalay
-          ? const Duration(seconds: 3)
-          : const Duration(seconds: 30),
+      pauseFor: isMalay ? const Duration(seconds: 3) : const Duration(seconds: 30),
       localeId: _resolvedLocaleId,
       onSoundLevelChange: (level) {
         _audioLevelController.add(((level + 2) / 12).clamp(0.0, 1.0));
@@ -276,6 +252,7 @@ class VoiceAssistantService {
         cancelOnError: false,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
+        onDevice: false,
       ),
     );
 
@@ -308,31 +285,33 @@ class VoiceAssistantService {
 
     final words = result.recognizedWords.trim();
     if (words.isNotEmpty) {
+      final wordsChanged = words != _sessionText;
       _sessionText = words;
       // Append current session to previous sessions' text
       _accumulatedText = (_previousText.isEmpty)
           ? words
           : '$_previousText $words';
       _transcriptController.add(_accumulatedText);
-    }
 
-    if (words.isNotEmpty && !_hasSpeech) {
-      _hasSpeech = true;
-      _initialSilenceTimer?.cancel();
-      _initialSilenceTimer = null;
-      debugPrint('[STT] Speech detected, switching to 5s post-speech timer');
-    }
+      if (!_hasSpeech) {
+        _hasSpeech = true;
+        _initialSilenceTimer?.cancel();
+        _initialSilenceTimer = null;
+        debugPrint('[STT] Speech detected, switching to 5s post-speech timer');
+      }
 
-    if (words.isNotEmpty) {
-      // Reset 5s timer on every new word — this is the real end-of-speech trigger
-      _postSpeechSilenceTimer?.cancel();
-      _postSpeechSilenceTimer = Timer(const Duration(seconds: 5), () {
-        if (_state == VoiceAssistantState.orderListening && !_orderCaptured) {
-          debugPrint('[STT] 5s silence — processing: $_accumulatedText');
-          _orderCaptured = true;
-          _processOrderText(_accumulatedText);
-        }
-      });
+      // Only reset 5s timer when words actually change — online STT re-sends
+      // the same partial after speech ends, which would delay processing forever.
+      if (wordsChanged) {
+        _postSpeechSilenceTimer?.cancel();
+        _postSpeechSilenceTimer = Timer(const Duration(seconds: 3), () {
+          if (_state == VoiceAssistantState.orderListening && !_orderCaptured) {
+            debugPrint('[STT] 5s silence — processing: $_accumulatedText');
+            _orderCaptured = true;
+            _processOrderText(_accumulatedText);
+          }
+        });
+      }
     }
 
     if (result.finalResult && words.isNotEmpty) {
@@ -341,6 +320,19 @@ class VoiceAssistantService {
       debugPrint(
         '[STT] Android finalResult — saved "$_previousText", restarting',
       );
+      // BM online STT stops at ~1s silence regardless of pauseFor —
+      // give a longer grace window so user can continue after natural pauses.
+      final isMalay = _resolvedLocaleId?.startsWith('ms') ?? false;
+      _postSpeechSilenceTimer?.cancel();
+      _postSpeechSilenceTimer = Timer(Duration(seconds: isMalay ? 5 : 3), () {
+        if (_state == VoiceAssistantState.orderListening && !_orderCaptured) {
+          debugPrint(
+            '[STT] silence after restart — processing: $_accumulatedText',
+          );
+          _orderCaptured = true;
+          _processOrderText(_accumulatedText);
+        }
+      });
       _scheduleRestart();
     } else if (result.finalResult && words.isEmpty) {
       // Final with nothing — let timers handle it

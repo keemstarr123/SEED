@@ -9,7 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AiExtractionService {
   final String _model =
-      'gemini-3-flash-preview'; // Latest stable model for the Google AI SDK
+      'gemini-3.1-flash-lite-preview'; // Latest stable model for the Google AI SDK
 
   final _scopes = ['https://www.googleapis.com/auth/cloud-platform'];
 
@@ -87,55 +87,65 @@ class AiExtractionService {
     );
 
     final systemInstruction = '''
-    Role: You are the Lead Spatial Reasoning Agent and Data Architect.
-    Task: Analyze multiple fragments of a menu across different images. Perform "Semantic Spatial Grouping".
-    Goal: Return all unique products found in a valid JSON format.
-    ''';
+Role: You are an expert menu parser for a Malaysian micro-business POS system.
+Task: Extract every product listed in the menu from the provided text and images.
+Priority: TEXT IS ALWAYS THE PRIMARY SOURCE. Images are optional extras — do not skip a product just because it has no photo.
+Goal: Return ALL unique products found in valid JSON, regardless of whether they have an associated image.
+''';
 
-    final prompt =
-        '''
-    Context:
-    Canvas Context (Images 0 to ${imagesBytes.length - 1}): ${jsonEncode(imageDimensions)}
-    Detected Objects: ${jsonEncode(masterGeminiContext)}
-    Detected Text: ${jsonEncode(masterTextContext)}
+    final prompt = '''
+Context:
+Canvas Context (Images 0 to ${imagesBytes.length - 1}): ${jsonEncode(imageDimensions)}
+Detected Objects (from Vision API, may be empty): ${jsonEncode(masterGeminiContext)}
+Detected Text (primary source): ${jsonEncode(masterTextContext)}
 
-    Instructions:
-    1. Product Extraction: Extract Name, Unit Price, Keywords, and Description.
-    2. Visual Mapping: Each identified product must be linked to its 'image_id' OR a manually estimated 'image_crop_box' + 'source_image_index'.
-    3. Justification: Explain where the image is physically located relative to the text.
-    4. Box Generation:
-        - If Vision API found it: Use the 'image_id'.
-        - If Vision API missed it: Set 'image_id' to null and YOU MUST MANUALLY ESTIMATE coordinates + 'source_image_index'.
-    5. Keyword Generation (Vocal Assistive):
-       - Generate a "keyword" field that is extremely short and concise (e.g., "Burger Ayam" instead of "Special Crispy Chicken Burger").
-       - This will be used for vocal assistive transaction recording; it must be easy to say and recognize.
+Instructions:
+1. TEXT-FIRST EXTRACTION:
+   - Scan ALL detected text blocks to find every product name and price.
+   - A product is any item with a name and a price (e.g. "Nasi Lemak ... RM5.50", "Teh Tarik 3.00").
+   - Do NOT skip products just because no image was detected for them.
+   - If the menu is mostly or entirely text (no food photos), that is fine — extract everything from text alone.
 
-    6. Description Generation (Distinguishable):
-       - Generate a short, informative description.
-       - Focus on details that help distinguish this product from others (e.g., unique ingredients, portion size, or spice level).
+2. Price Parsing:
+   - Prices may appear as "RM5.50", "5.50", "5", or after dots/dashes.
+   - If price is unclear or missing, default to 0.0.
 
-    7. Category Assignment:
-       - Assign exactly one appropriate category to each product (e.g., "Main Course", "Beverage", "Dessert", "Side Dish").
-       - Be consistent across similar items.
-    Format (JSON Schema):
-    IMPORTANT: You MUST use the exact key "product_name". Do not use "name" or "item".
+3. Image Linking (optional — only if Vision API detected something):
+   - If an image object matches the product, set 'image_id' and 'image_crop_box'.
+   - If NO matching image exists, set 'image_id' to null and 'image_crop_box' to null. This is perfectly valid.
+   - Set 'has_image' to true only if a real crop box is available.
+
+4. Keyword Generation (for voice ordering):
+   - Short, easy to say (e.g. "Nasi Lemak" not "Nasi Lemak Special Sambal Petai Berempah").
+   - Must be recognisable via speech-to-text.
+
+5. Description:
+   - One sentence. Highlight what makes this item distinct (ingredients, portion, spice level).
+   - If no description is available from the menu, generate a sensible one based on the product name.
+
+6. Category Assignment:
+   - Assign one of: "Main Course", "Beverage", "Dessert", "Side Dish", "Snack", "Set Meal", or "General".
+   - Be consistent for similar items.
+
+Format (JSON Schema):
+IMPORTANT: Use exact key "product_name". Do not use "name" or "item".
+{
+  "menu_extraction": [
     {
-      "menu_extraction": [
-        {
-          "product_name": "string",
-          "unit_price": number,
-          "keyword": "string",
-          "description": "string",
-          "category": "string",
-          "has_image": boolean,
-          "visual_justification": "string",
-          "image_id": "string or null",
-          "source_image_index": integer,
-          "image_crop_box": { "ymin": number, "xmin": number, "ymax": number, "xmax": number }
-        }
-      ]
+      "product_name": "string",
+      "unit_price": number,
+      "keyword": "string",
+      "description": "string",
+      "category": "string",
+      "has_image": boolean,
+      "visual_justification": "string",
+      "image_id": "string or null",
+      "source_image_index": integer,
+      "image_crop_box": { "ymin": number, "xmin": number, "ymax": number, "xmax": number } or null
     }
-    ''';
+  ]
+}
+''';
 
     final content = [
       Content.multi([
@@ -271,15 +281,16 @@ class AiExtractionService {
         };
       }
 
+      final hasImage = dynamicBox != null;
       finalProducts.add({
         'product_name': name,
         'description': description,
         'unit_price': price,
         'keyword': keyword,
         'category': category,
-        'has_image': p['has_image'] == true || dynamicBox != null,
+        'has_image': hasImage,
         'visual_justification': justification,
-        'image_crop_box': dynamicBox,
+        'image_crop_box': dynamicBox, // null is fine — product still included
         'source_image_index': sourceIdx,
       });
     }

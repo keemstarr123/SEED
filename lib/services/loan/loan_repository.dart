@@ -131,19 +131,34 @@ class LoanRepository {
     final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
     final data = await _supabase
         .from('orders')
-        .select('id, created_at, total_amount, transaction_status, order_details(id)')
+        .select(
+          'id, created_at, total_amount, transaction_status, '
+          'order_details(quantity, amount, product:products(name, unit_price))',
+        )
         .eq('business_id', businessId)
         .gte('created_at', threeMonthsAgo.toIso8601String())
         .order('created_at', ascending: false);
 
     return (data as List).map((row) {
-      final details = row['order_details'] as List? ?? [];
+      final rawDetails = row['order_details'] as List? ?? [];
+      final items = rawDetails.map((d) {
+        final qty = (d['quantity'] as num?)?.toInt() ?? 1;
+        final product = d['product'] as Map?;
+        final unitPrice = (product?['unit_price'] as num?)?.toDouble() ?? 0.0;
+        final lineTotal = (d['amount'] as num?)?.toDouble() ?? (qty * unitPrice);
+        return {
+          'name': product?['name'] ?? 'Item',
+          'qty': qty,
+          'unit_price': unitPrice,
+          'subtotal': lineTotal,
+        };
+      }).toList();
       return {
         'id': row['id'],
         'created_at': row['created_at'],
-        'total_amount': row['total_amount'],
+        'total_amount': (row['total_amount'] as num?)?.toDouble() ?? 0.0,
         'transaction_status': row['transaction_status'],
-        'item_count': details.length,
+        'items': items,
       };
     }).toList();
   }

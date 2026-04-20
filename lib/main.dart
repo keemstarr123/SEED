@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/screens/welcome_screen.dart';
+import 'package:seed/screens/home_page.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
 import 'package:seed/services/voice_assistant_service.dart';
@@ -25,7 +26,7 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
-  // Fetch and store the owner into RAM before the app starts
+  // Load session user into RAM before the app starts
   await UserService().initUser();
 
   runApp(const MyApp());
@@ -115,7 +116,9 @@ class _MyAppState extends State<MyApp> {
         theme: AppTheme.themeData,
         home: child,
       ),
-      child: const WelcomeScreen(),
+      child: UserService().isLoaded
+          ? const HomePage()
+          : const WelcomeScreen(),
     );
   }
 }

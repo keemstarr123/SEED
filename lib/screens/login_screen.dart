@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/screens/home_page.dart';
+import 'package:seed/screens/signup/signup_personal_screen.dart';
+import 'package:seed/services/user_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +19,105 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _isLoading = false;
+
+  Future<void> _googleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      const webClientId = '736517888750-31eguv3hrc8ckplffbbeimgch6b1bjng.apps.googleusercontent.com';
+      final googleUser = await GoogleSignIn(serverClientId: webClientId).signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) throw Exception('Google sign-in failed — no ID token.');
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: googleAuth.accessToken,
+      );
+
+      // Check if this Google user has completed KYC signup
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final existing = userId == null
+          ? null
+          : await Supabase.instance.client
+              .from('users')
+              .select('id')
+              .eq('id', userId)
+              .maybeSingle();
+
+      if (existing == null) {
+        // No account — sign out and send to signup
+        await Supabase.instance.client.auth.signOut();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'No account found for this Gmail. Please sign up first.',
+            style: GoogleFonts.poppins(fontSize: 13.sp),
+          ),
+          backgroundColor: Colors.orange[700],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r)),
+        ));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SignupPersonalScreen()),
+        );
+        return;
+      }
+
+      await UserService().initUser();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+      );
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (e) {
+      if (mounted) _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.poppins(fontSize: 13.sp)),
+      backgroundColor: Colors.red[600],
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+    ));
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      await UserService().initUser();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+      );
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -50,8 +154,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            Image.asset('assets/images/Black_SEED_Logo.PNG', height: 50.h),
-            SizedBox(height: 4.h),
             Text(
               'Please enter your details',
               textAlign: TextAlign.center,
@@ -178,28 +280,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
             // Login Button
             ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomePage()),
-                );
-              },
+              onPressed: _isLoading ? null : _login,
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 12.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
-              child: Text(
-                'Login',
-                style: TextStyle(fontSize: AppTheme.normalTextSize.sp),
-              ),
+              child: _isLoading
+                  ? SizedBox(
+                      height: 20.h,
+                      width: 20.h,
+                      child: const CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      'Login',
+                      style: TextStyle(fontSize: AppTheme.normalTextSize.sp),
+                    ),
             ),
             SizedBox(height: 16.h),
 
             // Google Sign In
             OutlinedButton(
-              onPressed: () {},
+              onPressed: _isLoading ? null : _googleSignIn,
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 12.h),
                 foregroundColor: Colors.black,
@@ -236,7 +340,14 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text("Don't have an account?"),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SignupPersonalScreen(),
+                      ),
+                    );
+                  },
                   child: Text(
                     'Sign Up',
                     style: TextStyle(

@@ -8,6 +8,9 @@ import 'package:seed/screens/make_order_screen.dart';
 import 'package:seed/screens/pending_orders_screen.dart';
 import 'package:seed/screens/completed_orders_screen.dart';
 import 'package:seed/screens/loan/loan_explore_screen.dart';
+import 'package:seed/screens/my_learning_screen.dart';
+import 'package:seed/screens/my_performance_screen.dart';
+import 'package:seed/screens/welcome_screen.dart';
 import 'package:seed/main.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -21,7 +24,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   late PageController _quickAccessController;
-  double _quickAccessPage = 1000.0;
 
   final List<Map<String, dynamic>> _quickAccessItems = [
     {
@@ -62,11 +64,6 @@ class _HomePageState extends State<HomePage> {
       viewportFraction: 0.85,
       initialPage: 1000,
     );
-    _quickAccessController.addListener(() {
-      setState(() {
-        _quickAccessPage = _quickAccessController.page!;
-      });
-    });
   }
 
   @override
@@ -76,6 +73,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onNavPressed(int i) {
+    if (i == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyPerformanceScreen()),
+      );
+      return;
+    }
+    if (i == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyLearningScreen()),
+      );
+      return;
+    }
     if (i == 3) {
       Navigator.push(
         context,
@@ -84,6 +95,17 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _currentIndex = i);
+  }
+
+  Future<void> _logout() async {
+    await Supabase.instance.client.auth.signOut();
+    UserService().clear();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
   }
 
   void _onVoiceFabPressed() {
@@ -265,14 +287,17 @@ class _HomePageState extends State<HomePage> {
               // Header
               Row(
                 children: [
-                  Container(
-                    width: 40.w,
-                    height: 40.h,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/Default_PFP.png'),
-                        fit: BoxFit.cover,
+                  GestureDetector(
+                    onTap: _logout,
+                    child: Container(
+                      width: 40.w,
+                      height: 40.h,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/Default_PFP.png'),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
@@ -288,7 +313,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       Text(
-                        UserService().currentOwnerName,
+                        UserService().currentBusinessName.isNotEmpty
+                            ? UserService().currentBusinessName
+                            : UserService().currentOwnerName,
                         style: TextStyle(
                           fontSize: AppTheme.smallTextSize.sp,
                           fontWeight: FontWeight.bold,
@@ -380,7 +407,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  'Lorem Ipsum',
+                                  'Tap and go',
                                   style: TextStyle(
                                     fontSize: AppTheme.extraSmallTextSize.sp,
                                     color: Colors.grey[500],
@@ -599,46 +626,52 @@ class _HomePageState extends State<HomePage> {
               SizedBox(height: 20.h),
               SizedBox(
                 height: 240.h,
-                child: PageView.builder(
-                  clipBehavior: Clip.none,
-                  controller: _quickAccessController,
-                  itemBuilder: (context, index) {
-                    final itemIndex = index % _quickAccessItems.length;
-                    final item = _quickAccessItems[itemIndex];
+                child: AnimatedBuilder(
+                  animation: _quickAccessController,
+                  builder: (context, child) => PageView.builder(
+                    clipBehavior: Clip.none,
+                    controller: _quickAccessController,
+                    itemBuilder: (context, index) {
+                      final itemIndex = index % _quickAccessItems.length;
+                      final item = _quickAccessItems[itemIndex];
 
-                    // Calculate distance from current page for animation
-                    double value = (_quickAccessPage - index).abs();
-                    // Active card is at distance 0, inactive ones are at distance 1.0+
-                    double activeFactor = (1 - (value * 0.3)).clamp(0.0, 1.0);
+                      final page =
+                          _quickAccessController.hasClients &&
+                              _quickAccessController.page != null
+                          ? _quickAccessController.page!
+                          : 1000.0;
+                      double value = (page - index).abs();
+                      double activeFactor = (1 - (value * 0.3)).clamp(0.0, 1.0);
 
-                    return Transform.translate(
-                      offset: Offset(0, -15 * activeFactor), // Active is higher
-                      child: Transform.scale(
-                        scale: 0.9 + (0.1 * activeFactor), // Active is larger
-                        child: GestureDetector(
-                          onTap: () {
-                            if (item['title'] == 'Browsing Loan') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoanExploreScreen(),
-                                ),
-                              );
-                            }
-                          },
-                          child: _buildQuickAccessCard(
-                            title: item['title'],
-                            subtitle: item['subtitle'],
-                            progress: item['progress'],
-                            time: item['time'],
-                            color: item['color'],
-                            icon: item['icon'],
-                            imagePath: item['imagePath'],
+                      return Transform.translate(
+                        offset: Offset(0, -15 * activeFactor),
+                        child: Transform.scale(
+                          scale: 0.9 + (0.1 * activeFactor),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (item['title'] == 'Browsing Loan') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoanExploreScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                            child: _buildQuickAccessCard(
+                              title: item['title'],
+                              subtitle: item['subtitle'],
+                              progress: item['progress'],
+                              time: item['time'],
+                              color: item['color'],
+                              icon: item['icon'],
+                              imagePath: item['imagePath'],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
               SizedBox(height: 120.h), // Space for FAB
@@ -712,10 +745,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 10.sp,
-                        color: Colors.black87,
-                      ),
+                      style: TextStyle(fontSize: 10.sp, color: Colors.black87),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -729,10 +759,7 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(width: 4.w),
                         Text(
                           progress,
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
                         ),
                         if (time.isNotEmpty) ...[
                           SizedBox(width: 12.w),

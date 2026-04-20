@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'package:seed/models/loan_agent.dart';
 import 'package:seed/models/loan_product.dart';
+import 'package:seed/services/user_service.dart';
 import 'package:seed/services/loan/loan_repository.dart';
 import 'package:seed/services/loan/pdf_generator.dart';
 import 'package:seed/services/loan/zip_packager.dart';
@@ -47,7 +48,6 @@ class _LoanSubmitStepState extends State<LoanSubmitStep> {
     'Generating Business Profile...',
     'Generating Sales Report...',
     'Generating e-Invoice Summary...',
-    'Generating Activity Log...',
     'Packaging into ZIP...',
     'Saving to your device...',
     'Done! Your documents are ready.',
@@ -81,13 +81,9 @@ class _LoanSubmitStepState extends State<LoanSubmitStep> {
 
       _setStatus(4);
       final invoiceRows = await _repo.fetchEInvoices(widget.businessId);
-      final invoicePdf = await PdfGenerator.generateEInvoiceSummary(invoiceRows);
+      final invoicePdf = await PdfGenerator.generateEInvoices(invoiceRows, business);
 
       _setStatus(5);
-      final activityRows = await _repo.fetchActivityLog(widget.userId);
-      final activityPdf = await PdfGenerator.generateActivityLog(activityRows);
-
-      _setStatus(6);
       final now = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
       final businessName = business['business_name'] ?? 'Unknown Business';
       final readme = '''IMPORTANT NOTICE
@@ -110,11 +106,10 @@ Business: $businessName
         'loan_pack/02_business_profile.pdf': businessPdf,
         'loan_pack/03_monthly_sales_report.pdf': salesPdf,
         'loan_pack/04_einvoice_summary.pdf': invoicePdf,
-        'loan_pack/05_activity_log.pdf': activityPdf,
         'loan_pack/README.txt': Uint8List.fromList(readme.codeUnits),
       });
 
-      _setStatus(7);
+      _setStatus(6);
       // Save ZIP directly to device Downloads folder
       await _saveZipToDevice(zipBytes);
       _zipBytes = zipBytes;
@@ -130,7 +125,7 @@ Business: $businessName
         messageTemplate: whatsappMsg,
       );
 
-      _setStatus(8);
+      _setStatus(7);
       setState(() => _state = _GenState.done);
     } catch (e) {
       if (mounted) {
@@ -169,87 +164,118 @@ Business: $businessName
 
   Future<void> _downloadZip() async {
     if (_zipBytes == null) return;
-    // If already saved during generation, just notify the path
-    if (_savedZipPath != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('File saved at: $_savedZipPath'),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-    try {
-      // Request storage permission on Android
-      final status = await Permission.storage.request();
-      if (!status.isGranted && !status.isLimited) {
-        // Android 13+ uses different permissions
-        final media = await Permission.manageExternalStorage.request();
-        if (!media.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Storage permission denied. Cannot save file.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          return;
-        }
-      }
 
-      // Save to Downloads folder
-      Directory? dir;
+    // Show confirmation modal first
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _DownloadConfirmSheet(
+        fileName: 'loan_pack.zip',
+        fileSize: '${(_zipBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB',
+        destination: 'Downloads/loan_pack.zip',
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await Permission.storage.request();
+
+      Directory dir;
       try {
-        // /storage/emulated/0/Download
         dir = Directory('/storage/emulated/0/Download');
         if (!await dir.exists()) {
-          dir = await getExternalStorageDirectory();
+          dir = (await getExternalStorageDirectory()) ??
+              await getApplicationDocumentsDirectory();
         }
       } catch (_) {
         dir = await getApplicationDocumentsDirectory();
       }
 
-      final file = File('${dir!.path}/loan_pack.zip');
+      final file = File('${dir.path}/loan_pack.zip');
       await file.writeAsBytes(_zipBytes!);
+      _savedZipPath = file.path;
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Saved to Downloads/loan_pack.zip'),
-            duration: const Duration(seconds: 4),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                const Text('Saved to Downloads/loan_pack.zip'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF43A047),
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r)),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Download failed: $e'),
-                behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Download failed: $e'),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+        ));
       }
     }
   }
 
+  String _buildWhatsAppMessage() {
+    final productName = widget.selectedProduct?.service.title ?? 'financial grant';
+    final businessName = UserService().currentBusinessName.isNotEmpty
+        ? UserService().currentBusinessName
+        : UserService().currentOwnerName;
+
+    final templates = {
+      'SME Loan': 'Hi, I am $businessName and I am interested in applying for the *SME Loan* programme. '
+          'I have prepared my full loan application pack via the SEED platform. '
+          'Could you please guide me on the next steps? Thank you.',
+      'Microloan': 'Hi, I am $businessName and I would like to apply for the *Microloan* scheme. '
+          'I have my business documents ready via SEED. '
+          'Please advise on the application process. Thank you.',
+      'Grant': 'Hi, I am $businessName and I am applying for a *Business Grant*. '
+          'I have gathered all the necessary documents via SEED. '
+          'Could you assist me with the submission? Thank you.',
+      'BSN Micro': 'Hi, I am $businessName and I am interested in the *BSN Micro Financing* scheme. '
+          'I have prepared my loan pack via SEED and would like to proceed with the application. Thank you.',
+      'TEKUN': 'Hi, I am $businessName and I would like to apply for *TEKUN Nasional* financing. '
+          'My application documents have been prepared via SEED. '
+          'Please let me know how to proceed. Thank you.',
+      'Agro Bank': 'Hi, I am $businessName and I am applying for *Agro Bank* financing. '
+          'I have my full business profile and documents ready via SEED. '
+          'Kindly advise on the next steps. Thank you.',
+    };
+
+    // Match by keyword in product name
+    for (final key in templates.keys) {
+      if (productName.toLowerCase().contains(key.toLowerCase())) {
+        return templates[key]!;
+      }
+    }
+
+    // Default fallback
+    return 'Hi, I am $businessName and I would like to apply for *$productName*. '
+        'I have prepared my full application pack via the SEED platform. '
+        'Please advise on the next steps. Thank you.';
+  }
+
   Future<void> _openWhatsApp() async {
-    final number = widget.agent.whatsappNumber.replaceAll('+', '');
-    final message = Uri.encodeComponent(
-      'Hi ${widget.agent.agentName}, I would like to apply for a loan. '
-      'I have attached my Loan Info Pack prepared via SEED. '
-      'Please review and advise. Thank you.',
-    );
+    const number = '60109450225'; // MY country code + number
+    final message = Uri.encodeComponent(_buildWhatsAppMessage());
     final url = Uri.parse('https://wa.me/$number?text=$message');
-    final launched =
-        await launchUrl(url, mode: LaunchMode.externalApplication);
+    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!launched) {
-      await Clipboard.setData(
-          ClipboardData(text: widget.agent.whatsappNumber));
+      await Clipboard.setData(const ClipboardData(text: '+60109450225'));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('WhatsApp not found. Agent number copied to clipboard.')),
+              content: Text('WhatsApp not found. Number copied to clipboard.')),
         );
       }
     }
@@ -382,7 +408,6 @@ Business: $businessName
                         'Monthly Sales Report',
                         'Personal Profile Summary',
                         'e-Invoice Summary',
-                        'Activity Log',
                         'README.txt',
                       ].map((item) => Padding(
                             padding: EdgeInsets.only(bottom: 4.h),
@@ -524,6 +549,150 @@ Business: $businessName
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Download confirmation bottom sheet ───────────────────────────────────────
+class _DownloadConfirmSheet extends StatelessWidget {
+  final String fileName;
+  final String fileSize;
+  final String destination;
+
+  const _DownloadConfirmSheet({
+    required this.fileName,
+    required this.fileSize,
+    required this.destination,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 32.h),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40.w,
+            height: 4.h,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.r),
+            ),
+          ),
+          SizedBox(height: 20.h),
+
+          // Icon
+          Container(
+            width: 64.w,
+            height: 64.w,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: Icon(Icons.download_rounded,
+                size: 32.sp, color: const Color(0xFF38B6FF)),
+          ),
+          SizedBox(height: 16.h),
+
+          Text(
+            'Download File',
+            style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1A1A1A)),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Do you want to save this file to your Downloads folder?',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+          ),
+          SizedBox(height: 20.h),
+
+          // File info card
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F7FA),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Column(
+              children: [
+                _infoRow(Icons.folder_zip_outlined, 'File', fileName),
+                SizedBox(height: 8.h),
+                _infoRow(Icons.data_usage_outlined, 'Size', fileSize),
+                SizedBox(height: 8.h),
+                _infoRow(Icons.save_alt_outlined, 'Save to', destination),
+              ],
+            ),
+          ),
+          SizedBox(height: 24.h),
+
+          // Buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    side: BorderSide(color: Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.r)),
+                  ),
+                  child: Text('Cancel',
+                      style: TextStyle(
+                          fontSize: 14.sp, color: Colors.grey[700])),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF38B6FF),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.r)),
+                  ),
+                  child: Text('Download',
+                      style: TextStyle(
+                          fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16.sp, color: const Color(0xFF38B6FF)),
+        SizedBox(width: 10.w),
+        Text('$label: ',
+            style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(value,
+              style: TextStyle(
+                  fontSize: 12.sp, color: const Color(0xFF1A1A1A)),
+              overflow: TextOverflow.ellipsis),
         ),
       ],
     );
