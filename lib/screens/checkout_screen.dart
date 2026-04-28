@@ -78,6 +78,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: AppLayout(
         currentIndex: _currentIndex,
         extendBody: true,
+        showNav: false,
         backgroundColor: const Color(0xFFF8F9FE),
         onNavPressed: (i) {
           setState(() => _currentIndex = i);

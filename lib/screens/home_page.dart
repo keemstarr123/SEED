@@ -10,7 +10,7 @@ import 'package:seed/screens/completed_orders_screen.dart';
 import 'package:seed/screens/loan/loan_explore_screen.dart';
 import 'package:seed/screens/my_learning_screen.dart';
 import 'package:seed/screens/my_performance_screen.dart';
-import 'package:seed/screens/welcome_screen.dart';
+import 'package:seed/screens/profile_screen.dart';
 import 'package:seed/main.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -25,21 +25,33 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   late PageController _quickAccessController;
 
-  final List<Map<String, dynamic>> _quickAccessItems = [
+  // ── Live stats ─────────────────────────────────────────────────────────────
+  bool _statsLoading = true;
+  int _pendingCount = 0;
+  int _completedCount = 0;
+  int _pendingItemsCount = 0;
+  int _loanAgentCount = 0;
+  int _learningInProgress = 0;
+  double _totalRevenue = 0.0;
+
+  List<Map<String, dynamic>> get _quickAccessItems => [
     {
       'title': 'My Learning',
-      'subtitle': 'Continue watching:\nChapter 2 - Leveraging AI in Financing',
-      'progress': '60%',
-      'time': '40 min',
+      'subtitle': _learningInProgress > 0
+          ? '$_learningInProgress chapter${_learningInProgress > 1 ? 's' : ''} in progress'
+          : 'Start your first lesson today.',
+      'progress': _learningInProgress > 0
+          ? '$_learningInProgress active'
+          : 'Get started',
+      'time': '',
       'color': const Color(0xFFB69AEE),
       'icon': Icons.book,
       'imagePath': 'assets/images/Login_Screen/Thumbnail_Learning.png',
     },
     {
       'title': 'Browsing Loan',
-      'subtitle':
-          'Secure additional funds with expert guidance from loan agents.',
-      'progress': '50 agents',
+      'subtitle': 'Secure additional funds now.',
+      'progress': '$_loanAgentCount agent${_loanAgentCount != 1 ? 's' : ''}',
       'time': '',
       'color': const Color(0xFF81D4FA),
       'icon': Icons.account_balance,
@@ -47,10 +59,9 @@ class _HomePageState extends State<HomePage> {
     },
     {
       'title': 'My Performance',
-      'subtitle':
-          'See how your sales are performing and where you\'re improving.',
-      'progress': '80%',
-      'time': '15 min',
+      'subtitle': 'Observe your sales performance. ',
+      'progress': 'RM ${_totalRevenue.toStringAsFixed(0)}',
+      'time': '',
       'color': const Color(0xFFFFCCBC),
       'icon': Icons.bar_chart,
       'imagePath': 'assets/images/Login_Screen/Thumbnail_Dashboard.png',
@@ -64,6 +75,91 @@ class _HomePageState extends State<HomePage> {
       viewportFraction: 0.85,
       initialPage: 1000,
     );
+    _quickAccessController.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    final ownerId = UserService().currentOwnerId;
+    if (ownerId == null) {
+      if (mounted) setState(() => _statsLoading = false);
+      return;
+    }
+    final db = Supabase.instance.client;
+    try {
+      final results = await Future.wait([
+        // 0: pending orders
+        db
+            .from('orders')
+            .select('id')
+            .eq('business_id', ownerId)
+            .eq('transaction_status', 'Pending'),
+        // 1: today's completed orders
+        db
+            .from('orders')
+            .select('id, total_amount')
+            .eq('business_id', ownerId)
+            .or(
+              'transaction_status.eq.completed,transaction_status.eq.Completed',
+            )
+            .gte(
+              'created_at',
+              DateTime(
+                DateTime.now().year,
+                DateTime.now().month,
+                DateTime.now().day,
+              ).toIso8601String(),
+            ),
+        // 2: pending items (sum of quantities)
+        db
+            .from('order_details')
+            .select(
+              'quantity, transaction_id, orders!inner(business_id, transaction_status)',
+            )
+            .eq('orders.business_id', ownerId)
+            .eq('orders.transaction_status', 'Pending'),
+        // 3: loan agents
+        db.from('loan_agents').select('user_id'),
+        // 4: learning in-progress chapters
+        db
+            .from('video_watch_progress')
+            .select('watch_percentage')
+            .eq('user_id', ownerId)
+            .eq('is_completed', false)
+            .gt('watch_percentage', 0),
+      ]);
+
+      final pending = (results[0] as List).length;
+      final completedList = results[1] as List;
+      final completed = completedList.length;
+      double revenue = 0;
+      for (final r in completedList) {
+        revenue += (r['total_amount'] as num?)?.toDouble() ?? 0;
+      }
+      int itemsTotal = 0;
+      for (final r in (results[2] as List)) {
+        itemsTotal += (r['quantity'] as num?)?.toInt() ?? 0;
+      }
+      final agents = (results[3] as List).length;
+      final inProgress = (results[4] as List).length;
+
+      if (mounted) {
+        setState(() {
+          _pendingCount = pending;
+          _completedCount = completed;
+          _pendingItemsCount = itemsTotal;
+          _loanAgentCount = agents;
+          _learningInProgress = inProgress;
+          _totalRevenue = revenue;
+          _statsLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[HomePage] fetchStats error: $e');
+      if (mounted) setState(() => _statsLoading = false);
+    }
   }
 
   @override
@@ -95,17 +191,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     setState(() => _currentIndex = i);
-  }
-
-  Future<void> _logout() async {
-    await Supabase.instance.client.auth.signOut();
-    UserService().clear();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      (route) => false,
-    );
   }
 
   void _onVoiceFabPressed() {
@@ -288,7 +373,10 @@ class _HomePageState extends State<HomePage> {
               Row(
                 children: [
                   GestureDetector(
-                    onTap: _logout,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    ),
                     child: Container(
                       width: 40.w,
                       height: 40.h,
@@ -349,14 +437,14 @@ class _HomePageState extends State<HomePage> {
 
               // Make an Order Banner
               SizedBox(
-                height: 240.h,
+                height: 200.h,
                 child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.bottomCenter,
                   children: [
                     // Blue Card Background
                     Container(
-                      height: 189.h,
+                      height: 150.h,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(32.r),
                         gradient: const LinearGradient(
@@ -374,7 +462,7 @@ class _HomePageState extends State<HomePage> {
                       right: 0,
                       child: Image.asset(
                         'assets/images/Home_Page/Order_Chef_Deco.png',
-                        height: 180.h,
+                        height: 140.h,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -407,7 +495,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  'Tap and go',
+                                  'Get your order started now',
                                   style: TextStyle(
                                     fontSize: AppTheme.extraSmallTextSize.sp,
                                     color: Colors.grey[500],
@@ -522,21 +610,30 @@ class _HomePageState extends State<HomePage> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  '5',
-                                  style: TextStyle(
-                                    fontSize: AppTheme.largeTextSize.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                _statsLoading
+                                    ? SizedBox(
+                                        width: 20.w,
+                                        height: 20.h,
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        '$_pendingCount',
+                                        style: TextStyle(
+                                          fontSize: AppTheme.largeTextSize.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                 SizedBox(width: 8.w),
-                                Text(
-                                  '~ 30 items',
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    color: Colors.grey,
+                                if (!_statsLoading && _pendingItemsCount > 0)
+                                  Text(
+                                    '~ $_pendingItemsCount items',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: Colors.grey,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -599,13 +696,21 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             SizedBox(height: 4.h),
-                            Text(
-                              '15',
-                              style: TextStyle(
-                                fontSize: AppTheme.largeTextSize.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            _statsLoading
+                                ? SizedBox(
+                                    width: 20.w,
+                                    height: 20.h,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    '$_completedCount',
+                                    style: TextStyle(
+                                      fontSize: AppTheme.largeTextSize.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ],
                         ),
                       ),
@@ -623,12 +728,12 @@ class _HomePageState extends State<HomePage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 20.h),
-              SizedBox(
-                height: 240.h,
-                child: AnimatedBuilder(
-                  animation: _quickAccessController,
-                  builder: (context, child) => PageView.builder(
+              SizedBox(height: 8.h),
+              Padding(
+                padding: EdgeInsets.only(top: 16.h),
+                child: SizedBox(
+                  height: 190.h,
+                  child: PageView.builder(
                     clipBehavior: Clip.none,
                     controller: _quickAccessController,
                     itemBuilder: (context, index) {
@@ -649,11 +754,26 @@ class _HomePageState extends State<HomePage> {
                           scale: 0.9 + (0.1 * activeFactor),
                           child: GestureDetector(
                             onTap: () {
-                              if (item['title'] == 'Browsing Loan') {
+                              final title = item['title'] as String;
+                              if (title == 'Browsing Loan') {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => const LoanExploreScreen(),
+                                  ),
+                                );
+                              } else if (title == 'My Learning') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const MyLearningScreen(),
+                                  ),
+                                );
+                              } else if (title == 'My Performance') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const MyPerformanceScreen(),
                                   ),
                                 );
                               }
@@ -674,7 +794,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              SizedBox(height: 120.h), // Space for FAB
+              SizedBox(height: 80.h),
             ],
           ),
         ),

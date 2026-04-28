@@ -70,7 +70,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   // Header
                   if (!_isLoginOpen)
                     Padding(
-                      padding: EdgeInsets.all(24.w),
+                      padding: EdgeInsets.all(0.w),
                       child: Row(
                         children: [
                           Image.asset(
@@ -140,20 +140,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      Icons.eco,
-                                      color: const Color(0xFFFFCC80),
-                                      size: 20.sp,
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      'SEED',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                    Image.asset(
+                                      'assets/images/Black_SEED_Logo.png',
+                                      width: 72.w,
+                                      height: 26.h,
+                                      semanticLabel: 'SEED Logo',
+                                      fit: BoxFit.contain,
                                     ),
                                   ],
                                 ),

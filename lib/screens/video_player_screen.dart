@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:seed/theme/app_theme.dart';
 import 'package:seed/services/user_service.dart';
@@ -10,13 +10,15 @@ import 'package:seed/screens/quiz_modal.dart';
 class VideoPlayerScreen extends StatefulWidget {
   final String chapterId;
   final String chapterName;
-  final String? videoUrl; // stores the YouTube video ID
+  final String? videoUrl;
   final String? summary;
   final int sequenceNumber;
   final String moduleName;
   final String moduleId;
+  final Map<String, dynamic>? nextChapter;
 
   const VideoPlayerScreen({
+    this.nextChapter,
     super.key,
     required this.chapterId,
     required this.chapterName,
@@ -32,55 +34,132 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  YoutubePlayerController? _controller;
-  Timer? _progressTimer;
+  YoutubePlayerController? _ytController;
   bool _hasVideo = false;
-  int? _lastSavedPosition;
+  bool _positionRestored = false;
+  bool _noQuizCompleteSaved = false;
 
-  // ── Quiz state ─────────────────────────────────────────────────────────────
+  // ── Quiz state ──────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _quizItems = [];
-  List<int> _triggerSeconds = [];
+  final List<int> _triggerSeconds = [];
   final Set<int> _shownQuizIndices = {};
   bool _quizVisible = false;
   bool _triggersCalculated = false;
   String? _quizId;
   DateTime? _quizSessionStart;
 
+  // ── Streams (position + player state) ──────────────────────────────────────
+  StreamSubscription<YoutubeVideoState>? _videoStateSub;
+  StreamSubscription<YoutubePlayerValue>? _playerValueSub;
+  double _videoDuration = 0.0;
+
   @override
   void initState() {
     super.initState();
-    _initPlayer();
+    _ensureProgressRow(); // create row immediately so it's never empty
+    final raw = widget.videoUrl;
+    if (raw != null && raw.isNotEmpty) {
+      _hasVideo = true;
+      _initPlayer(_extractVideoId(raw));
+      _fetchQuizItems();
+    }
   }
 
-  void _initPlayer() {
-    final videoId = widget.videoUrl;
-    if (videoId == null || videoId.isEmpty) return;
+  Future<void> _ensureProgressRow() async {
+    final userId = UserService().currentOwnerId;
+    if (userId == null) {
+      debugPrint('[Progress] ensureRow: userId is NULL — skipping');
+      return;
+    }
+    try {
+      final db = Supabase.instance.client;
+      final existing = await db
+          .from('video_watch_progress')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('module_id', widget.chapterId)
+          .maybeSingle();
+      if (existing == null) {
+        await db.from('video_watch_progress').insert({
+          'user_id': userId,
+          'module_id': widget.chapterId,
+          'watch_percentage': 0.0,
+          'is_completed': false,
+          'last_watched_second': 0,
+          'last_watched_at': DateTime.now().toUtc().toIso8601String(),
+        });
+        debugPrint('[Progress] row created for chapter ${widget.chapterId}');
+      } else {
+        debugPrint('[Progress] row already exists: ${existing['id']}');
+      }
+    } catch (e) {
+      debugPrint('[Progress] ensureRow error: $e');
+    }
+  }
 
-    _controller = YoutubePlayerController(
-      initialVideoId: videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        enableCaption: true,
-        captionLanguage: 'en',
-        forceHD: false,
-        disableDragSeek: true,
+  String _extractVideoId(String raw) {
+    final uri = Uri.tryParse(raw);
+    if (uri != null) {
+      if (uri.queryParameters.containsKey('v')) return uri.queryParameters['v']!;
+      if (uri.host == 'youtu.be' && uri.pathSegments.isNotEmpty) {
+        return uri.pathSegments.first;
+      }
+    }
+    return raw;
+  }
+
+  void _initPlayer(String videoId) {
+    _ytController = YoutubePlayerController(
+      params: const YoutubePlayerParams(
+        origin: 'https://www.youtube-nocookie.com',
+        playsInline: true,
+        showControls: false,
+        showFullscreenButton: false,
+        enableCaption: false,
+        strictRelatedVideos: true,
       ),
-    )..addListener(_onPlayerChanged);
-
-    setState(() => _hasVideo = true);
-    _restorePosition();
-    _fetchQuizItems();
-    _startProgressTimer();
+    );
+    _ytController!.loadVideoById(videoId: videoId);
+    _videoStateSub = _ytController!.videoStateStream.listen(_onVideoState);
+    _playerValueSub = _ytController!.listen(_onPlayerValue);
   }
 
-  // ── Quiz fetch ─────────────────────────────────────────────────────────────
+  void _onVideoState(YoutubeVideoState state) {
+    if (!mounted) return;
+    final pos = state.position.inSeconds.toDouble();
+    if (!_triggersCalculated && _quizItems.isNotEmpty && _videoDuration > 0) {
+      _calculateTriggers(_videoDuration.toInt());
+    }
+    _checkQuizTrigger(pos);
+  }
+
+  void _onPlayerValue(YoutubePlayerValue value) {
+    if (!mounted) return;
+    final dur = value.metaData.duration.inSeconds.toDouble();
+    if (dur > 0) {
+      _videoDuration = dur;
+      if (!_positionRestored) {
+        _positionRestored = true;
+        _restorePosition();
+      }
+      if (!_triggersCalculated && _quizItems.isNotEmpty) {
+        _calculateTriggers(_videoDuration.toInt());
+      }
+    }
+    // For chapters with no quizzes, mark complete when video ends
+    if (value.playerState == PlayerState.ended &&
+        _quizItems.isEmpty &&
+        !_noQuizCompleteSaved) {
+      _noQuizCompleteSaved = true;
+      _writeProgress(answered: 1, total: 1);
+    }
+  }
+
+  // ── Quiz ────────────────────────────────────────────────────────────────────
 
   Future<void> _fetchQuizItems() async {
     try {
       final supabase = Supabase.instance.client;
-
-      // Find the quiz linked to this chapter
       final quizRes = await supabase
           .from('quizzes')
           .select('id')
@@ -90,49 +169,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       if (quizRes == null) return;
       _quizId = quizRes['id'] as String;
 
-      // Fetch all quiz items
       final itemsRes = await supabase
           .from('quiz_items')
-          .select(
-            'id, question, option_a, option_b, option_c, option_d, correct_option, explanation',
-          )
+          .select('id, question, option_a, option_b, option_c, option_d, correct_option, explanation')
           .eq('quiz_id', _quizId!)
-          .order('id'); // stable insertion order
+          .order('id');
 
       if (mounted) {
-        setState(
-          () => _quizItems = List<Map<String, dynamic>>.from(itemsRes as List),
-        );
-        debugPrint(
-          '[Quiz] loaded ${_quizItems.length} items for quiz $_quizId',
-        );
+        setState(() => _quizItems = List<Map<String, dynamic>>.from(itemsRes as List));
       }
     } catch (e) {
       debugPrint('[VideoPlayer] Quiz fetch error: $e');
-    }
-  }
-
-  Future<void> _recordQuizAttempt() async {
-    final quizId = _quizId;
-    final userId = UserService().currentOwnerId;
-    if (quizId == null || userId == null) return;
-
-    final timeTaken = _quizSessionStart != null
-        ? DateTime.now().difference(_quizSessionStart!).inSeconds
-        : 0;
-
-    try {
-      await Supabase.instance.client.from('quiz_attempts').insert({
-        'quiz_id': quizId,
-        'user_id': userId,
-        'score': 100.0, // forced correct answers
-        'has_passed': true,
-        'time_taken': timeTaken,
-        'date_attempted': DateTime.now().toUtc().toIso8601String(),
-      });
-      debugPrint('[Quiz] attempt recorded');
-    } catch (e) {
-      debugPrint('[Quiz] attempt record error: $e');
     }
   }
 
@@ -146,13 +193,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     debugPrint('[Quiz] triggers at: $_triggerSeconds');
   }
 
-  void _checkQuizTrigger() {
-    if (_quizVisible || _triggerSeconds.isEmpty || _quizItems.isEmpty) return;
-    final controller = _controller;
-    if (controller == null) return;
-    if (controller.value.playerState != PlayerState.playing) return;
-
-    final positionSec = controller.value.position.inSeconds;
+  void _checkQuizTrigger(double positionSec) {
+    if (_quizVisible || _triggerSeconds.isEmpty) return;
     for (int i = 0; i < _triggerSeconds.length; i++) {
       if (!_shownQuizIndices.contains(i) && positionSec >= _triggerSeconds[i]) {
         _shownQuizIndices.add(i);
@@ -163,9 +205,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   Future<void> _showQuizModal(int index) async {
-    _controller?.pause();
+    _ytController?.pauseVideo();
     _quizVisible = true;
-    // Start timing from the first quiz
     _quizSessionStart ??= DateTime.now();
 
     await showDialog(
@@ -180,22 +221,66 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
 
     _quizVisible = false;
+    final answered = _shownQuizIndices.length;
+    final total = _quizItems.length;
 
-    // Record attempt after the final question is answered
-    if (_shownQuizIndices.length == _quizItems.length) {
+    // Write progress immediately after every correct quiz answer
+    await _writeProgress(answered: answered, total: total);
+
+    if (answered == total) {
       await _recordQuizAttempt();
+      if (mounted) _showChapterComplete();
+      return;
     }
-
-    _controller?.play();
+    _ytController?.playVideo();
   }
 
-  // ── Position restore ───────────────────────────────────────────────────────
+  // ── Progress DB write (SELECT → INSERT or UPDATE) ───────────────────────────
+
+  Future<void> _writeProgress({required int answered, required int total}) async {
+    final userId = UserService().currentOwnerId;
+    if (userId == null || total == 0) return;
+
+    final pct = (answered / total * 100.0).clamp(0.0, 100.0);
+    final isCompleted = answered >= total;
+    final now = DateTime.now().toUtc().toIso8601String();
+    final db = Supabase.instance.client;
+
+    try {
+      final existing = await db
+          .from('video_watch_progress')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('module_id', widget.chapterId)
+          .maybeSingle();
+
+      if (existing == null) {
+        await db.from('video_watch_progress').insert({
+          'user_id': userId,
+          'module_id': widget.chapterId,
+          'watch_percentage': pct,
+          'is_completed': isCompleted,
+          'last_watched_second': 0,
+          'last_watched_at': now,
+        });
+        debugPrint('[Progress] INSERT $answered/$total → ${pct.toInt()}%');
+      } else {
+        await db.from('video_watch_progress').update({
+          'watch_percentage': pct,
+          'is_completed': isCompleted,
+          'last_watched_at': now,
+        }).eq('user_id', userId).eq('module_id', widget.chapterId);
+        debugPrint('[Progress] UPDATE $answered/$total → ${pct.toInt()}%');
+      }
+    } catch (e) {
+      debugPrint('[Progress] Error: $e');
+    }
+  }
 
   Future<void> _restorePosition() async {
     try {
       final userId = UserService().currentOwnerId;
       if (userId == null) return;
-
       final res = await Supabase.instance.client
           .from('video_watch_progress')
           .select('last_watched_second, is_completed')
@@ -207,7 +292,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         final lastSec = (res['last_watched_second'] as int?) ?? 0;
         final isCompleted = res['is_completed'] == true;
         if (!isCompleted && lastSec > 10) {
-          _controller?.seekTo(Duration(seconds: lastSec));
+          _ytController?.seekTo(seconds: lastSec.toDouble(), allowSeekAhead: true);
         }
       }
     } catch (e) {
@@ -215,84 +300,156 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
-  // ── Progress tracking ──────────────────────────────────────────────────────
-
-  void _onPlayerChanged() {
-    if (!mounted) return;
-
-    final controller = _controller;
-    if (controller == null) return;
-
-    // Calculate quiz triggers once duration is known
-    if (!_triggersCalculated && _quizItems.isNotEmpty) {
-      final dur = controller.metadata.duration.inSeconds;
-      if (dur > 0) _calculateTriggers(dur);
-    }
-
-    // Check if a quiz should pop up
-    _checkQuizTrigger();
-
-    // Save progress when video ends
-    if (controller.value.playerState == PlayerState.ended) {
-      _saveProgress(forceComplete: true);
-    }
-  }
-
-  void _startProgressTimer() {
-    _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _saveProgress();
-    });
-  }
-
-  Future<void> _saveProgress({bool forceComplete = false}) async {
-    final controller = _controller;
-    if (controller == null) return;
-
+  Future<void> _recordQuizAttempt() async {
+    final quizId = _quizId;
     final userId = UserService().currentOwnerId;
-    if (userId == null) return;
-
-    final position = controller.value.position;
-    final duration = controller.metadata.duration;
-    if (duration.inSeconds == 0) return;
-
-    // Skip upsert if nothing has changed (e.g. video is paused)
-    if (!forceComplete && position.inSeconds == _lastSavedPosition) return;
-    _lastSavedPosition = position.inSeconds;
-
-    final pct = (position.inSeconds / duration.inSeconds * 100.0).clamp(
-      0.0,
-      100.0,
-    );
-    final isCompleted = forceComplete || pct >= 90.0;
-
+    if (quizId == null || userId == null) return;
+    final timeTaken = _quizSessionStart != null
+        ? DateTime.now().difference(_quizSessionStart!).inSeconds
+        : 0;
     try {
-      await Supabase.instance.client.from('video_watch_progress').upsert({
+      await Supabase.instance.client.from('quiz_attempts').insert({
+        'quiz_id': quizId,
         'user_id': userId,
-        'module_id': widget.chapterId,
-        'last_watched_second': position.inSeconds,
-        'watch_percentage': isCompleted ? 100.0 : pct,
-        'is_completed': isCompleted,
-        'last_watched_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'user_id,module_id');
+        'score': 100.0,
+        'has_passed': true,
+        'time_taken': timeTaken,
+        'date_attempted': DateTime.now().toUtc().toIso8601String(),
+      });
     } catch (e) {
-      debugPrint('[VideoPlayer] Save error: $e');
+      debugPrint('[Quiz] attempt record error: $e');
     }
+  }
+
+  void _showChapterComplete() {
+    final next = widget.nextChapter;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+        backgroundColor: Colors.white,
+        insetPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 40.h),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 28.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72.w,
+                height: 72.w,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFFFF3E0),
+                ),
+                child: Icon(Icons.stars_rounded,
+                    color: const Color(0xFFFF8A00), size: 38.sp),
+              ),
+              SizedBox(height: 20.h),
+              Text(
+                'Chapter Complete! 🎉',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'You\'ve finished all quizzes.\nYour progress has been saved.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: AppTheme.smallTextSize.sp,
+                    color: Colors.grey[600],
+                    height: 1.5),
+              ),
+              SizedBox(height: 28.h),
+              if (next != null)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7E57C2),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.r)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VideoPlayerScreen(
+                            chapterId: next['id'] as String,
+                            chapterName: next['name'] as String? ?? '',
+                            videoUrl: next['video_url'] as String?,
+                            summary: next['summary'] as String?,
+                            sequenceNumber: (next['sequence_number'] as int?) ?? 0,
+                            moduleName: widget.moduleName,
+                            moduleId: widget.moduleId,
+                            nextChapter: next['nextChapter'] as Map<String, dynamic>?,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Next Chapter',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTheme.smallTextSize.sp)),
+                        SizedBox(width: 6.w),
+                        Icon(Icons.arrow_forward_rounded, size: 18.sp),
+                      ],
+                    ),
+                  ),
+                ),
+              SizedBox(height: next != null ? 10.h : 0),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.r)),
+                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    'Back to Course',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTheme.smallTextSize.sp,
+                        color: Colors.grey[700]),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _progressTimer?.cancel();
-    _controller?.removeListener(_onPlayerChanged);
-    _saveProgress(); // final save on exit
-    _controller?.dispose();
+    _videoStateSub?.cancel();
+    _playerValueSub?.cancel();
+    _ytController?.close();
     super.dispose();
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
+  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasVideo || _controller == null) {
+    if (!_hasVideo || _ytController == null) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: Column(
@@ -304,49 +461,35 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       );
     }
 
-    return YoutubePlayerBuilder(
-      onExitFullScreen: () {
-        // Rebuild after returning from fullscreen
-        setState(() {});
-      },
-      player: YoutubePlayer(
-        controller: _controller!,
-        showVideoProgressIndicator: true,
-        progressIndicatorColor: Colors.red,
-        progressColors: const ProgressBarColors(
-          playedColor: Colors.red,
-          handleColor: Colors.redAccent,
-          bufferedColor: Colors.white38,
-          backgroundColor: Colors.transparent,
+    return YoutubePlayerScaffold(
+      controller: _ytController!,
+      aspectRatio: 16 / 9,
+      builder: (context, player) => Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            Stack(
+              children: [
+                player,
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: SafeArea(
+                    bottom: false,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(child: _buildScrollableContent()),
+          ],
         ),
-        topActions: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const Expanded(child: SizedBox()),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-        aspectRatio: 16 / 9,
       ),
-      builder: (context, player) {
-        return Scaffold(
-          backgroundColor: Colors.white,
-          body: Column(
-            children: [
-              player,
-              Expanded(child: _buildScrollableContent()),
-            ],
-          ),
-        );
-      },
     );
   }
-
-  // ── Fallback when no video ID ──────────────────────────────────────────────
 
   Widget _buildNoVideoPlayer() {
     return SafeArea(
@@ -361,16 +504,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.video_library_outlined,
-                      color: Colors.white38,
-                      size: 56.sp,
-                    ),
+                    Icon(Icons.video_library_outlined,
+                        color: Colors.white38, size: 56.sp),
                     SizedBox(height: 12.h),
-                    Text(
-                      'No video available',
-                      style: TextStyle(color: Colors.white54, fontSize: 14.sp),
-                    ),
+                    Text('No video available',
+                        style: TextStyle(color: Colors.white54, fontSize: 14.sp)),
                   ],
                 ),
               ),
@@ -389,8 +527,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  // ── Scrollable content below video ─────────────────────────────────────────
-
   Widget _buildScrollableContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,35 +540,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  // ── Chapter info ───────────────────────────────────────────────────────────
-
   Widget _buildChapterInfo() {
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 10.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.chapterName,
-            style: TextStyle(
-              fontSize: AppTheme.largeTextSize.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(widget.chapterName,
+              style: TextStyle(
+                  fontSize: AppTheme.largeTextSize.sp,
+                  fontWeight: FontWeight.bold)),
           SizedBox(height: 4.h),
-          Text(
-            'Chapter ${widget.sequenceNumber}',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: AppTheme.extraSmallTextSize.sp,
-            ),
-          ),
+          Text('Chapter ${widget.sequenceNumber}',
+              style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: AppTheme.extraSmallTextSize.sp)),
         ],
       ),
     );
   }
-
-  // ── Action bar ─────────────────────────────────────────────────────────────
 
   Widget _buildActionBar() {
     return Padding(
@@ -452,15 +578,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
           SizedBox(width: 10.w),
           Expanded(
-            child: Text(
-              widget.moduleName,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: AppTheme.smallTextSize.sp,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(widget.moduleName,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: AppTheme.smallTextSize.sp),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
           ),
           _actionButton(Icons.thumb_up_outlined, 'Like'),
           _actionButton(Icons.thumb_down_outlined, 'Dislike'),
@@ -484,57 +607,45 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  // ── Video summary ──────────────────────────────────────────────────────────
-
   Widget _buildVideoSummary() {
-    final desc = widget.summary;
-
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Video Summary',
-            style: TextStyle(
-              fontSize: AppTheme.largeTextSize.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text('Video Summary',
+              style: TextStyle(
+                  fontSize: AppTheme.largeTextSize.sp,
+                  fontWeight: FontWeight.bold)),
           SizedBox(height: 14.h),
           Expanded(
             child: Container(
               width: double.infinity,
               padding: EdgeInsets.all(16.r),
+              clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FE),
                 borderRadius: BorderRadius.circular(14.r),
                 border: Border.all(color: const Color(0xFFEEEEEE)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Overview',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.smallTextSize.sp,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Text(
-                        desc ?? 'No summary available.',
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Overview',
                         style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTheme.smallTextSize.sp)),
+                    SizedBox(height: 10.h),
+                    Text(
+                      widget.summary ?? 'No summary available.',
+                      style: TextStyle(
                           fontSize: AppTheme.extraSmallTextSize.sp,
                           color: Colors.grey[700],
-                          height: 1.6,
-                        ),
-                      ),
+                          height: 1.6),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

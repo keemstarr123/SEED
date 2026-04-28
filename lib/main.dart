@@ -11,11 +11,13 @@ import 'package:seed/services/user_service.dart';
 import 'package:seed/services/voice_assistant_service.dart';
 import 'package:seed/services/wake_word_service.dart';
 import 'package:seed/screens/voice_assistant_overlay.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // await Firebase.initializeApp(); // Only enable this if you have configured Firebase with the CLI
 
@@ -190,6 +192,8 @@ class AppLayout extends StatelessWidget {
   final bool extendBody;
   final Color? backgroundColor;
 
+  final bool showNav;
+
   const AppLayout({
     super.key,
     required this.body,
@@ -198,6 +202,7 @@ class AppLayout extends StatelessWidget {
     this.onNavPressed,
     this.extendBody = false,
     this.backgroundColor,
+    this.showNav = true,
   });
 
   @override
@@ -206,14 +211,14 @@ class AppLayout extends StatelessWidget {
       extendBody: extendBody,
       backgroundColor: backgroundColor,
       body: body,
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: showNav ? FloatingActionButton(
         onPressed: onFabPressed ?? () {},
         backgroundColor: Colors.black,
         shape: const CircleBorder(),
         child: Icon(Icons.add, color: Colors.white, size: 32.sp),
-      ),
+      ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
+      bottomNavigationBar: showNav ? BottomAppBar(
         height: 56.h,
         shape: const CircularNotchedRectangle(),
         notchMargin: 3.0,
@@ -244,7 +249,7 @@ class AppLayout extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      ) : null,
     );
   }
 }

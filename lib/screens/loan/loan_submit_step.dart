@@ -1,11 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
 import 'package:seed/models/loan_agent.dart';
 import 'package:seed/models/loan_product.dart';
 import 'package:seed/services/user_service.dart';
@@ -38,9 +38,8 @@ class _LoanSubmitStepState extends State<LoanSubmitStep> {
 
   _GenState _state = _GenState.idle;
   String _statusText = '';
-  String? _savedZipPath;
+  String? _driveLink;
   String? _errorMsg;
-  Uint8List? _zipBytes;
 
   final List<String> _steps = [
     'Preparing your documents...',
@@ -49,8 +48,8 @@ class _LoanSubmitStepState extends State<LoanSubmitStep> {
     'Generating Sales Report...',
     'Generating e-Invoice Summary...',
     'Packaging into ZIP...',
-    'Saving to your device...',
-    'Done! Your documents are ready.',
+    'Uploading to Google Drive...',
+    'Done! Your pack is on Google Drive.',
   ];
 
   @override
@@ -110,15 +109,9 @@ Business: $businessName
       });
 
       _setStatus(6);
-      // Save ZIP directly to device Downloads folder
-      await _saveZipToDevice(zipBytes);
-      _zipBytes = zipBytes;
+      _driveLink = await _uploadToGoogleDrive(zipBytes, businessName);
 
-      // Record loan request in DB (no file upload)
-      final whatsappMsg =
-          'Hi ${widget.agent.agentName}, I would like to apply for a loan. '
-          'I have attached my Loan Info Pack prepared via SEED. '
-          'Please review and advise. Thank you.';
+      final whatsappMsg = _buildWhatsAppMessage();
       await _repo.insertLoanRequest(
         agentId: widget.agent.userId,
         microbusinessId: widget.businessId,
@@ -141,86 +134,68 @@ Business: $businessName
     if (mounted) setState(() => _statusText = _steps[index]);
   }
 
-  Future<void> _saveZipToDevice(Uint8List bytes) async {
-    try {
-      await Permission.storage.request();
-    } catch (_) {}
+  Future<String> _uploadToGoogleDrive(Uint8List bytes, String businessName) async {
+    final googleSignIn = GoogleSignIn(
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+    );
+    var account = await googleSignIn.signInSilently();
+    account ??= await googleSignIn.signIn();
+    if (account == null) throw Exception('Google Sign-In required to upload to Drive.');
 
-    Directory dir;
-    try {
-      dir = Directory('/storage/emulated/0/Download');
-      if (!await dir.exists()) {
-        dir = (await getExternalStorageDirectory()) ??
-            await getApplicationDocumentsDirectory();
-      }
-    } catch (_) {
-      dir = await getApplicationDocumentsDirectory();
-    }
+    final auth = await account.authentication;
+    final token = auth.accessToken;
+    if (token == null) throw Exception('Could not obtain Google access token.');
 
-    final file = File('${dir.path}/loan_pack.zip');
-    await file.writeAsBytes(bytes);
-    _savedZipPath = file.path;
-  }
+    final filename =
+        'SEED_Loan_Pack_${businessName.replaceAll(' ', '_')}_${DateFormat("yyyyMMdd_HHmm").format(DateTime.now())}.zip';
+    final metadata = jsonEncode({'name': filename, 'mimeType': 'application/zip'});
 
-  Future<void> _downloadZip() async {
-    if (_zipBytes == null) return;
+    const boundary = 'seed_loan_boundary';
+    final bodyParts = <int>[];
+    void add(String s) => bodyParts.addAll(utf8.encode(s));
+    add('--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n');
+    add(metadata);
+    add('\r\n--$boundary\r\nContent-Type: application/zip\r\n\r\n');
+    bodyParts.addAll(bytes);
+    add('\r\n--$boundary--');
 
-    // Show confirmation modal first
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _DownloadConfirmSheet(
-        fileName: 'loan_pack.zip',
-        fileSize: '${(_zipBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB',
-        destination: 'Downloads/loan_pack.zip',
-      ),
+    final uploadRes = await http.post(
+      Uri.parse('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'multipart/related; boundary=$boundary',
+      },
+      body: Uint8List.fromList(bodyParts),
     );
 
-    if (confirmed != true) return;
+    if (uploadRes.statusCode != 200) {
+      throw Exception('Drive upload failed (${uploadRes.statusCode}): ${uploadRes.body}');
+    }
 
-    try {
-      await Permission.storage.request();
+    final fileId = jsonDecode(uploadRes.body)['id'] as String;
 
-      Directory dir;
-      try {
-        dir = Directory('/storage/emulated/0/Download');
-        if (!await dir.exists()) {
-          dir = (await getExternalStorageDirectory()) ??
-              await getApplicationDocumentsDirectory();
-        }
-      } catch (_) {
-        dir = await getApplicationDocumentsDirectory();
-      }
+    // Make publicly readable (anyone with link)
+    await http.post(
+      Uri.parse('https://www.googleapis.com/drive/v3/files/$fileId/permissions'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'type': 'anyone', 'role': 'reader'}),
+    );
 
-      final file = File('${dir.path}/loan_pack.zip');
-      await file.writeAsBytes(_zipBytes!);
-      _savedZipPath = file.path;
+    return 'https://drive.google.com/file/d/$fileId/view?usp=sharing';
+  }
 
+  Future<void> _openDriveLink() async {
+    final link = _driveLink;
+    if (link == null) return;
+    final url = Uri.parse(link);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      await Clipboard.setData(ClipboardData(text: link));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
-                const SizedBox(width: 10),
-                const Text('Saved to Downloads/loan_pack.zip'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF43A047),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r)),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Download failed: $e'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Link copied to clipboard.'),
         ));
       }
     }
@@ -231,38 +206,33 @@ Business: $businessName
     final businessName = UserService().currentBusinessName.isNotEmpty
         ? UserService().currentBusinessName
         : UserService().currentOwnerName;
+    final linkLine = _driveLink != null
+        ? '\n\n📎 Loan Info Pack: $_driveLink'
+        : '';
 
     final templates = {
       'SME Loan': 'Hi, I am $businessName and I am interested in applying for the *SME Loan* programme. '
-          'I have prepared my full loan application pack via the SEED platform. '
-          'Could you please guide me on the next steps? Thank you.',
+          'I have prepared my full loan application pack via the SEED platform.$linkLine\n\nCould you please guide me on the next steps? Thank you.',
       'Microloan': 'Hi, I am $businessName and I would like to apply for the *Microloan* scheme. '
-          'I have my business documents ready via SEED. '
-          'Please advise on the application process. Thank you.',
+          'I have my business documents ready via SEED.$linkLine\n\nPlease advise on the application process. Thank you.',
       'Grant': 'Hi, I am $businessName and I am applying for a *Business Grant*. '
-          'I have gathered all the necessary documents via SEED. '
-          'Could you assist me with the submission? Thank you.',
+          'I have gathered all the necessary documents via SEED.$linkLine\n\nCould you assist me with the submission? Thank you.',
       'BSN Micro': 'Hi, I am $businessName and I am interested in the *BSN Micro Financing* scheme. '
-          'I have prepared my loan pack via SEED and would like to proceed with the application. Thank you.',
+          'I have prepared my loan pack via SEED.$linkLine\n\nI would like to proceed with the application. Thank you.',
       'TEKUN': 'Hi, I am $businessName and I would like to apply for *TEKUN Nasional* financing. '
-          'My application documents have been prepared via SEED. '
-          'Please let me know how to proceed. Thank you.',
+          'My application documents have been prepared via SEED.$linkLine\n\nPlease let me know how to proceed. Thank you.',
       'Agro Bank': 'Hi, I am $businessName and I am applying for *Agro Bank* financing. '
-          'I have my full business profile and documents ready via SEED. '
-          'Kindly advise on the next steps. Thank you.',
+          'I have my full business profile and documents ready via SEED.$linkLine\n\nKindly advise on the next steps. Thank you.',
     };
 
-    // Match by keyword in product name
     for (final key in templates.keys) {
       if (productName.toLowerCase().contains(key.toLowerCase())) {
         return templates[key]!;
       }
     }
 
-    // Default fallback
     return 'Hi, I am $businessName and I would like to apply for *$productName*. '
-        'I have prepared my full application pack via the SEED platform. '
-        'Please advise on the next steps. Thank you.';
+        'I have prepared my full application pack via the SEED platform.$linkLine\n\nPlease advise on the next steps. Thank you.';
   }
 
   Future<void> _openWhatsApp() async {
@@ -363,17 +333,18 @@ Business: $businessName
               Container(
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF38B6FF).withValues(alpha: 0.15),
+                  color: const Color(0xFF34A853).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(Icons.download_rounded,
-                    size: 22.sp, color: const Color(0xFF38B6FF)),
+                child: Icon(Icons.cloud_done_rounded,
+                    size: 22.sp, color: const Color(0xFF34A853)),
               ),
               SizedBox(width: 12.w),
-              Text(
-                'Download the Loan Info Pack',
-                style:
-                    TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Your Loan Info Pack is now on Google Drive',
+                  style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -394,7 +365,6 @@ Business: $businessName
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left: contents list
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,8 +386,7 @@ Business: $businessName
                                 Icon(Icons.check,
                                     size: 12.sp, color: Colors.black87),
                                 SizedBox(width: 6.w),
-                                Text(item,
-                                    style: TextStyle(fontSize: 11.sp)),
+                                Text(item, style: TextStyle(fontSize: 11.sp)),
                               ],
                             ),
                           )),
@@ -425,16 +394,16 @@ Business: $businessName
                   ),
                 ),
                 SizedBox(width: 12.w),
-                // Download button
+                // View on Drive button
                 GestureDetector(
-                  onTap: _downloadZip,
+                  onTap: _openDriveLink,
                   child: Container(
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(12.r),
                     ),
-                    child: Icon(Icons.download_rounded,
+                    child: Icon(Icons.open_in_new_rounded,
                         size: 22.sp, color: Colors.white),
                   ),
                 ),
@@ -449,22 +418,22 @@ Business: $businessName
             iconColor: const Color(0xFF38B6FF),
             text: 'Click the ',
             bold: '"WhatsApp Now" button',
+            trailing: ' below',
           ),
           SizedBox(height: 14.h),
           _instructionRow(
-            icon: Icons.attach_file,
+            icon: Icons.link_rounded,
             iconColor: const Color(0xFF38B6FF),
-            text: 'When WhatsApp opens, ',
-            bold: 'attach the Loan Info Pack',
-            trailing: ' before sending the message.',
+            text: 'The ',
+            bold: 'Google Drive link',
+            trailing: ' is already embedded in your message.',
           ),
           SizedBox(height: 14.h),
           _instructionRow(
             icon: Icons.celebration_outlined,
             iconColor: const Color(0xFF38B6FF),
-            text: 'You have now ',
-            bold: 'successfully submitted',
-            trailing: ' your application!',
+            text: 'Send the WhatsApp message to your ',
+            bold: 'loan agent!',
           ),
           SizedBox(height: 32.h),
 
@@ -549,150 +518,6 @@ Business: $businessName
               ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Download confirmation bottom sheet ───────────────────────────────────────
-class _DownloadConfirmSheet extends StatelessWidget {
-  final String fileName;
-  final String fileSize;
-  final String destination;
-
-  const _DownloadConfirmSheet({
-    required this.fileName,
-    required this.fileSize,
-    required this.destination,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 32.h),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Container(
-            width: 40.w,
-            height: 4.h,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2.r),
-            ),
-          ),
-          SizedBox(height: 20.h),
-
-          // Icon
-          Container(
-            width: 64.w,
-            height: 64.w,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD),
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-            child: Icon(Icons.download_rounded,
-                size: 32.sp, color: const Color(0xFF38B6FF)),
-          ),
-          SizedBox(height: 16.h),
-
-          Text(
-            'Download File',
-            style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1A1A1A)),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Do you want to save this file to your Downloads folder?',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
-          ),
-          SizedBox(height: 20.h),
-
-          // File info card
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F7FA),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Column(
-              children: [
-                _infoRow(Icons.folder_zip_outlined, 'File', fileName),
-                SizedBox(height: 8.h),
-                _infoRow(Icons.data_usage_outlined, 'Size', fileSize),
-                SizedBox(height: 8.h),
-                _infoRow(Icons.save_alt_outlined, 'Save to', destination),
-              ],
-            ),
-          ),
-          SizedBox(height: 24.h),
-
-          // Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r)),
-                  ),
-                  child: Text('Cancel',
-                      style: TextStyle(
-                          fontSize: 14.sp, color: Colors.grey[700])),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38B6FF),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r)),
-                  ),
-                  child: Text('Download',
-                      style: TextStyle(
-                          fontSize: 14.sp, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16.sp, color: const Color(0xFF38B6FF)),
-        SizedBox(width: 10.w),
-        Text('$label: ',
-            style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500)),
-        Expanded(
-          child: Text(value,
-              style: TextStyle(
-                  fontSize: 12.sp, color: const Color(0xFF1A1A1A)),
-              overflow: TextOverflow.ellipsis),
         ),
       ],
     );

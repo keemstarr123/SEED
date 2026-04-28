@@ -24,15 +24,19 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _googleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      const webClientId = '736517888750-31eguv3hrc8ckplffbbeimgch6b1bjng.apps.googleusercontent.com';
-      final googleUser = await GoogleSignIn(serverClientId: webClientId).signIn();
+      const webClientId =
+          '736517888750-31eguv3hrc8ckplffbbeimgch6b1bjng.apps.googleusercontent.com';
+      final googleUser = await GoogleSignIn(
+        serverClientId: webClientId,
+      ).signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
         return;
       }
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
-      if (idToken == null) throw Exception('Google sign-in failed — no ID token.');
+      if (idToken == null)
+        throw Exception('Google sign-in failed — no ID token.');
 
       await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
@@ -45,25 +49,28 @@ class _LoginScreenState extends State<LoginScreen> {
       final existing = userId == null
           ? null
           : await Supabase.instance.client
-              .from('users')
-              .select('id')
-              .eq('id', userId)
-              .maybeSingle();
+                .from('users')
+                .select('id')
+                .eq('id', userId)
+                .maybeSingle();
 
       if (existing == null) {
         // No account — sign out and send to signup
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            'No account found for this Gmail. Please sign up first.',
-            style: GoogleFonts.poppins(fontSize: 13.sp),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No account found for this Gmail. Please sign up first.',
+              style: GoogleFonts.poppins(fontSize: 13.sp),
+            ),
+            backgroundColor: Colors.orange[700],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.r),
+            ),
           ),
-          backgroundColor: Colors.orange[700],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
-        ));
+        );
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const SignupPersonalScreen()),
@@ -87,12 +94,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.poppins(fontSize: 13.sp)),
-      backgroundColor: Colors.red[600],
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.poppins(fontSize: 13.sp)),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+      ),
+    );
   }
 
   Future<void> _login() async {
@@ -153,6 +164,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            Image.asset(
+              'assets/images/Black_SEED_Logo.png',
+              width: 100.w,
+              height: 50.h,
+              semanticLabel: 'SEED Logo',
+              fit: BoxFit.contain,
+            ),
+            SizedBox(height: 8.h),
 
             Text(
               'Please enter your details',
@@ -292,7 +311,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 20.h,
                       width: 20.h,
                       child: const CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : Text(
                       'Login',

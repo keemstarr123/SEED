@@ -407,8 +407,6 @@ class _SignupPersonalScreenState extends State<SignupPersonalScreen> {
                         ),
                       ),
                     ),
-                    // Bottom nav
-                    _KycBottomNav(activeIndex: 1),
                   ],
                 ),
               ),
@@ -441,57 +439,3 @@ class _IcNumberFormatter extends TextInputFormatter {
   }
 }
 
-// ── KYC-specific bottom nav ──────────────────────────────────────────────────
-class _KycBottomNav extends StatelessWidget {
-  final int activeIndex;
-  const _KycBottomNav({required this.activeIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      {'icon': Icons.home_outlined, 'label': 'HOME'},
-      {'icon': Icons.verified_user_outlined, 'label': 'KYC'},
-      {'icon': Icons.book_outlined, 'label': 'LEDGER'},
-      {'icon': Icons.person_outlined, 'label': 'PROFILE'},
-    ];
-    return Container(
-      height: 60.h,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: const Color(0xFFF0F0F0), width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(items.length, (i) {
-          final isActive = i == activeIndex;
-          return GestureDetector(
-            onTap: () {},
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  items[i]['icon'] as IconData,
-                  size: 22.sp,
-                  color: isActive
-                      ? const Color(0xFF30ACF6)
-                      : const Color(0xFF9E9E9E),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  items[i]['label'] as String,
-                  style: GoogleFonts.poppins(
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w600,
-                    color: isActive
-                        ? const Color(0xFF30ACF6)
-                        : const Color(0xFF9E9E9E),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}

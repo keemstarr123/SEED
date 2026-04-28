@@ -80,7 +80,7 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
     final rows = await supabase
         .from('orders')
         .select(
-          'id, created_at, total_amount, order_details(quantity, product:products(name, categories!inner(name)))',
+          'id, created_at, total_amount, order_details(quantity, amount, product:products(name, categories!inner(name)))',
         )
         .eq('business_id', ownerId)
         .or('transaction_status.eq.completed,transaction_status.eq.Completed')
@@ -185,8 +185,7 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
         final catName =
             (product['categories'] as Map?)?['name'] as String? ?? 'General';
         final qty = (d['quantity'] as num?)?.toInt() ?? 1;
-        final unitPrice = (d['unit_price'] as num?)?.toDouble() ?? 0.0;
-        final lineTotal = qty * unitPrice;
+        final lineTotal = (d['amount'] as num?)?.toDouble() ?? 0.0;
         productSales[name] = (productSales[name] ?? 0) + lineTotal;
         productQty[name] = (productQty[name] ?? 0) + qty;
         categorySales[catName] = (categorySales[catName] ?? 0) + lineTotal;
@@ -225,7 +224,7 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
       final periodLabel = _period.name;
 
       final model = GenerativeModel(
-        model: 'gemini-2.0-flash-lite',
+        model: 'gemini-3.1-flash-lite-preview',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
@@ -233,25 +232,36 @@ class _MyPerformanceScreenState extends State<MyPerformanceScreen> {
         ),
       );
 
+      final bizName = UserService().currentBusinessName;
+      final bizType = UserService().currentBusinessType;
+
       final prompt =
           '''
 You are a smart business advisor for a Malaysian micro-business using a POS app called SEED.
 
-Business context ($periodLabel period):
+Business profile:
+- Business Name: ${bizName.isEmpty ? 'Unknown' : bizName}
+- Business Type: ${bizType.isEmpty ? 'General retail/food' : bizType}
+- Operating Country: Malaysia
+- Customer base: Mix of Malay, Chinese, and Indian ethnics — culturally diverse with varying dietary preferences and spending habits
+- Market: Local neighbourhood / small-town / urban micro-business
+
+Performance data ($periodLabel period):
 - Total Revenue: RM${_totalSales.toStringAsFixed(2)}
 - Total Orders: $_totalOrders
-- Top Products: ${topStr.isEmpty ? 'No data' : topStr}
-- Best Category: $_bestCategory
-- Business Type: ${UserService().currentBusinessType}
+- Top Products by Revenue: ${topStr.isEmpty ? 'No data' : topStr}
+- Best Performing Category: $_bestCategory
 
-Generate exactly 3 short, actionable business insights or recommendations based on this performance data.
-Each insight must be practical and specific to a small Malaysian food/retail business.
+Generate exactly 3 actionable business insights tailored to this specific business and Malaysian market context.
+Each insight should be grounded in the performance data and culturally relevant.
 
-Return ONLY a JSON array with exactly 3 objects:
+Return ONLY a JSON array with exactly 3 objects, no extra text:
 [
-  {"title": "short title (3-5 words)", "summary": "1-2 sentence actionable advice"},
-  {"title": "short title (3-5 words)", "summary": "1-2 sentence actionable advice"},
-  {"title": "short title (3-5 words)", "summary": "1-2 sentence actionable advice"}
+  {
+    "title": "short title (3-5 words)",
+    "description": "2-3 sentences explaining the insight clearly, referencing specific data points where possible",
+    "why": "1-2 sentences on why this matters for this type of business in the Malaysian market"
+  }
 ]
 ''';
 
@@ -270,7 +280,8 @@ Return ONLY a JSON array with exactly 3 objects:
           .map(
             (e) => {
               'title': (e['title'] as String?) ?? '',
-              'summary': (e['summary'] as String?) ?? '',
+              'description': (e['description'] as String?) ?? '',
+              'why': (e['why'] as String?) ?? '',
             },
           )
           .toList();
@@ -303,7 +314,7 @@ Return ONLY a JSON array with exactly 3 objects:
                     // Header
                     AppHeader(
                       subtitle: 'Performance',
-                      title: 'My Performance',
+                      title: UserService().currentBusinessName.isNotEmpty ? UserService().currentBusinessName : UserService().currentOwnerName,
                       trailing: IconButton(
                         onPressed: _load,
                         icon: Icon(
@@ -472,9 +483,9 @@ class _StatsChartCard extends StatelessWidget {
             'Visualise your sales performance throughout the duration.',
             style: TextStyle(fontSize: 10.sp, color: Colors.grey[500]),
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 8.h),
           SizedBox(
-            height: 140.h,
+            height: 120.h,
             child: spots.isEmpty
                 ? Center(
                     child: Text(
@@ -687,128 +698,136 @@ class _ProductsCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: 12.h),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left: best product + category
-              Expanded(
-                flex: 5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ProductHighlight(
-                      label: 'Best Selling Product',
-                      name: bestProduct,
-                      icon: Icons.star_rounded,
-                    ),
-                    SizedBox(height: 10.h),
-                    _ProductHighlight(
-                      label: 'Best Selling Category',
-                      name: bestCategory,
-                      icon: Icons.category_rounded,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 12.w),
-              // Right: top 3 with image peeking above
-              Expanded(
-                flex: 5,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // White card — padded top to leave room for image overlap
-                    Container(
-                      margin: EdgeInsets.only(top: 44.h),
-                      padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14.r),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Top 3 Products',
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1E293B),
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          if (topProducts.isEmpty)
-                            Text(
-                              'No data',
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                color: Colors.grey,
-                              ),
-                            )
-                          else
-                            ...topProducts.asMap().entries.map((e) {
-                              final colors = [
-                                const Color(0xFFFFD700),
-                                const Color(0xFFAAAAAA),
-                                const Color(0xFFCD7F32),
-                              ];
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: 6.h),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 10.w,
-                                      height: 10.w,
-                                      decoration: BoxDecoration(
-                                        color: colors[e.key],
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    SizedBox(width: 5.w),
-                                    Expanded(
-                                      child: Text(
-                                        e.value['name'] as String,
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          color: const Color(0xFF1E293B),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Text(
-                                      'RM${fmt.format(e.value['amount'] as double)}',
-                                      style: TextStyle(
-                                        fontSize: 9.sp,
-                                        color: Colors.grey[500],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                        ],
-                      ),
-                    ),
-                    // Image peeking above the card
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Image.asset(
-                          'assets/images/business_dashboard/lucky_pie.png',
-                          height: 80.h,
-                          width: 30.w,
-                          fit: BoxFit.fill,
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left: best product + category — 50/50 height
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _ProductHighlight(
+                          label: 'Best Selling Product',
+                          name: bestProduct,
+                          icon: Icons.star_rounded,
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 8.h),
+                      Expanded(
+                        child: _ProductHighlight(
+                          label: 'Best Selling Category',
+                          name: bestCategory,
+                          icon: Icons.category_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(width: 12.w),
+                // Right: fixed image + top 3 products
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Image card — wraps to image natural height
+                      Container(
+                        height: 40.h,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                        padding: EdgeInsets.all(4.w),
+                        child: Image.asset(
+                          'assets/images/business_dashboard/lucky_pie.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      // Top 3 card — fixed height (always fits 3 rows)
+                      SizedBox(
+                        height: 110.h,
+                        child: Container(
+                          padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Top 3 Products',
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                              SizedBox(height: 10.h),
+                              if (topProducts.isEmpty)
+                                Text(
+                                  'No data',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: Colors.grey,
+                                  ),
+                                )
+                              else
+                                ...topProducts.asMap().entries.map((e) {
+                                  final colors = [
+                                    const Color(0xFFFFD700),
+                                    const Color(0xFFAAAAAA),
+                                    const Color(0xFFCD7F32),
+                                  ];
+                                  return Padding(
+                                    padding: EdgeInsets.only(bottom: 6.h),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 10.w,
+                                          height: 10.w,
+                                          decoration: BoxDecoration(
+                                            color: colors[e.key],
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        SizedBox(width: 5.w),
+                                        Expanded(
+                                          child: Text(
+                                            e.value['name'] as String,
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              color: const Color(0xFF1E293B),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          'RM${fmt.format(e.value['amount'] as double)}',
+                                          style: TextStyle(
+                                            fontSize: 9.sp,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -970,7 +989,8 @@ class _InsightsSection extends StatelessWidget {
                   child: _InsightCard(
                     index: e.key + 1,
                     title: e.value['title'] ?? '',
-                    summary: e.value['summary'] ?? '',
+                    description: e.value['description'] ?? '',
+                    why: e.value['why'] ?? '',
                     icon: _icons[e.key % _icons.length],
                     color: _colors[e.key % _colors.length],
                   ),
@@ -983,43 +1003,252 @@ class _InsightsSection extends StatelessWidget {
   }
 }
 
-class _InsightCard extends StatefulWidget {
+class _InsightCard extends StatelessWidget {
   final int index;
   final String title;
-  final String summary;
+  final String description;
+  final String why;
   final IconData icon;
   final Color color;
 
   const _InsightCard({
     required this.index,
     required this.title,
-    required this.summary,
+    required this.description,
+    required this.why,
     required this.icon,
     required this.color,
   });
 
   @override
-  State<_InsightCard> createState() => _InsightCardState();
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _InsightDetailPage(
+            index: index,
+            title: title,
+            description: description,
+            why: why,
+            icon: icon,
+            color: color,
+          ),
+        ),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 28.w,
+                  height: 28.w,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$index',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Icon(icon, size: 16.sp, color: color),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1E293B),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'read more',
+              style: TextStyle(
+                fontSize: 10.sp,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _InsightCardState extends State<_InsightCard> {
-  bool _expanded = false;
+// ── Insight detail page ───────────────────────────────────────────────────────
+class _InsightDetailPage extends StatelessWidget {
+  final int index;
+  final String title;
+  final String description;
+  final String why;
+  final IconData icon;
+  final Color color;
+
+  const _InsightDetailPage({
+    required this.index,
+    required this.title,
+    required this.description,
+    required this.why,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FE),
+      body: Column(
+        children: [
+          // Gradient header
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20.w, 56.h, 20.w, 28.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withValues(alpha: 0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 36.w,
+                    height: 36.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.arrow_back, color: Colors.white, size: 18.sp),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Row(
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 40.w,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$index',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Icon(icon, color: Colors.white, size: 22.sp),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'Suggestions $index',
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Body
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(20.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DetailSection(
+                    label: 'Description',
+                    text: description,
+                    color: color,
+                  ),
+                  SizedBox(height: 16.h),
+                  _DetailSection(
+                    label: 'Why this could help?',
+                    text: why,
+                    color: color,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  final String label;
+  final String text;
+  final Color color;
+
+  const _DetailSection({
+    required this.label,
+    required this.text,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,63 +1256,31 @@ class _InsightCardState extends State<_InsightCard> {
           Row(
             children: [
               Container(
-                width: 28.w,
-                height: 28.w,
+                width: 4.w,
+                height: 16.h,
                 decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '${widget.index}',
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold,
-                      color: widget.color,
-                    ),
-                  ),
+                  color: color,
+                  borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
-              SizedBox(width: 6.w),
-              Icon(widget.icon, size: 16.sp, color: widget.color),
+              SizedBox(width: 8.w),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 12.h),
           Text(
-            widget.title,
+            text.isEmpty ? '—' : text,
             style: TextStyle(
-              fontSize: 11.sp,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E293B),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: 6.h),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Text(
-              widget.summary,
-              style: TextStyle(
-                fontSize: 10.sp,
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
-            ),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-          ),
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? 'read less' : 'read more',
-              style: TextStyle(
-                fontSize: 10.sp,
-                color: widget.color,
-                fontWeight: FontWeight.w600,
-              ),
+              fontSize: 13.sp,
+              color: Colors.grey[600],
+              height: 1.6,
             ),
           ),
         ],

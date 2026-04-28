@@ -28,6 +28,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _chapters = [];
   final Map<String, Map<String, dynamic>> _progressMap = {};
+  final Map<String, bool> _quizCompletedMap = {};
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             'id, name, description, summary, video_url, duration_minutes, sequence_number',
           )
           .eq('module_id', widget.moduleId)
-          .order('sequence_number');
+          .order('sequence_number', ascending: true);
 
       final chapters = List<Map<String, dynamic>>.from(chaptersRes as List);
 
@@ -68,6 +69,34 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           final mid = p['module_id'] as String?;
           if (mid != null) _progressMap[mid] = p as Map<String, dynamic>;
         }
+
+        // Fetch quiz completion
+        final quizzesRes = await supabase
+            .from('quizzes')
+            .select('id, module_chapter_id')
+            .inFilter('module_chapter_id', chapterIds);
+
+        final quizList = List<Map<String, dynamic>>.from(quizzesRes as List);
+        final quizIds = quizList.map((q) => q['id'] as String).toList();
+
+        _quizCompletedMap.clear();
+        if (quizIds.isNotEmpty) {
+          final attemptsRes = await supabase
+              .from('quiz_attempts')
+              .select('quiz_id')
+              .eq('user_id', userId)
+              .eq('has_passed', true)
+              .inFilter('quiz_id', quizIds);
+
+          final passedIds = (attemptsRes as List)
+              .map((a) => a['quiz_id'] as String)
+              .toSet();
+
+          for (final q in quizList) {
+            final chId = q['module_chapter_id'] as String;
+            _quizCompletedMap[chId] = passedIds.contains(q['id'] as String);
+          }
+        }
       }
 
       if (mounted) {
@@ -82,21 +111,24 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     }
   }
 
+  bool _isUnlocked(int index) {
+    if (index == 0) return true;
+    final prevId = _chapters[index - 1]['id'] as String;
+    return _progressMap[prevId]?['is_completed'] == true;
+  }
+
   Color _statusColor(String chapterId) {
     final p = _progressMap[chapterId];
-    if (p == null) return Colors.grey;                        // locked — grey
-    if (p['is_completed'] == true) return const Color(0xFF4CAF50); // done — green
-    return const Color(0xFFFFC107);                           // in progress — yellow
+    if (p == null) return Colors.grey; // locked — grey
+    if (p['is_completed'] == true)
+      return const Color(0xFF4CAF50); // done — green
+    return const Color(0xFFFFC107); // in progress — yellow
   }
 
   Widget _statusIcon(String chapterId) {
     final p = _progressMap[chapterId];
     if (p == null) {
-      return _iconBubble(
-        Icons.lock,
-        Colors.grey[200]!,
-        Colors.grey[500]!,
-      );
+      return _iconBubble(Icons.lock, Colors.grey[200]!, Colors.grey[500]!);
     }
     if (p['is_completed'] == true) {
       return _iconBubble(
@@ -220,8 +252,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     final pct = (progress?['watch_percentage'] as num?)?.toDouble() ?? 0;
     final duration = (chapter['duration_minutes'] as int?) ?? 0;
     final sequenceNumber = (chapter['sequence_number'] as int?) ?? (index + 1);
+    final unlocked = _isUnlocked(index);
+    final quizDone = _quizCompletedMap[chapterId] == true;
 
-    final statusColor = _statusColor(chapterId);
+    final statusColor = unlocked
+        ? _statusColor(chapterId)
+        : Colors.grey.shade300;
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -241,149 +277,207 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Colored left accent strip ──
-            Container(width: 5.w, color: statusColor),
-
-            // ── Card content ──
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(18.r),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-          // ── Chapter title + status icon ──
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Colored left accent strip ──
+              Container(width: 5.w, color: statusColor),
+
+              // ── Card content ──
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      chapter['name'] as String? ?? '',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: AppTheme.normalTextSize.sp,
+                child: Padding(
+                  padding: EdgeInsets.all(18.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Chapter title + status icon ──
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  chapter['name'] as String? ?? '',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTheme.normalTextSize.sp,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Chapter $sequenceNumber',
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: AppTheme.extraSmallTextSize.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _statusIcon(chapterId),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Chapter $sequenceNumber',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: AppTheme.extraSmallTextSize.sp,
+                      SizedBox(height: 12.h),
+
+                      // ── Language + Duration ──
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.language,
+                            color: Colors.grey[400],
+                            size: 14.sp,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'English',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          SizedBox(width: 16.w),
+                          Icon(
+                            Icons.access_time,
+                            color: Colors.grey[400],
+                            size: 14.sp,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            '$duration minutes',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              _statusIcon(chapterId),
-            ],
-          ),
-          SizedBox(height: 12.h),
+                      SizedBox(height: 14.h),
 
-          // ── Language + Duration ──
-          Row(
-            children: [
-              Icon(Icons.language, color: Colors.grey[400], size: 14.sp),
-              SizedBox(width: 4.w),
-              Text(
-                'English',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
-              ),
-              SizedBox(width: 16.w),
-              Icon(Icons.access_time, color: Colors.grey[400], size: 14.sp),
-              SizedBox(width: 4.w),
-              Text(
-                '$duration minutes',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
+                      // ── Progress ──
+                      Row(
+                        children: [
+                          Text(
+                            'Current Progress',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${pct.toInt()}%',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6.h),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4.r),
+                        child: LinearProgressIndicator(
+                          value: pct / 100.0,
+                          backgroundColor: Colors.grey[200],
+                          color: statusColor,
+                          minHeight: 5,
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
 
-          // ── Progress ──
-          Row(
-            children: [
-              Text(
-                'Current Progress',
-                style: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
-              ),
-              const Spacer(),
-              Text(
-                '${pct.toInt()}%',
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 6.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4.r),
-            child: LinearProgressIndicator(
-              value: pct / 100.0,
-              backgroundColor: Colors.grey[200],
-              color: statusColor,
-              minHeight: 5,
-            ),
-          ),
-          SizedBox(height: 14.h),
+                      // ── Quiz badge ──
+                      if (quizDone)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              size: 14.sp,
+                              color: const Color(0xFF4CAF50),
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Quiz Completed',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ],
+                        ),
 
-          // ── Watch button ──
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.r),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () async {
-                debugPrint('[CourseDetail] chapter keys: ${chapter.keys.toList()}');
-                debugPrint('[CourseDetail] summary value: ${chapter['summary']}');
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VideoPlayerScreen(
-                      chapterId: chapterId,
-                      chapterName: chapter['name'] as String? ?? '',
-                      videoUrl: chapter['video_url'] as String?,
-                      summary: chapter['summary'] as String?,
-                      sequenceNumber: sequenceNumber,
-                      moduleName: widget.moduleName,
-                      moduleId: widget.moduleId,
-                    ),
-                  ),
-                );
-                // Refresh progress after returning from video
-                await _fetchData();
-              },
-              child: Text(
-                _buttonLabel(chapterId),
-                style: TextStyle(
-                  fontSize: AppTheme.smallTextSize.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),            // closes Text
-            ),              // closes ElevatedButton
-          ),                // closes SizedBox
-                  ],        // closes Column children
-                ),          // closes Column
-              ),            // closes Padding
-            ),              // closes Expanded
-          ],                // closes Row children
-        ),                  // closes Row
-        ),                  // closes IntrinsicHeight
-      ),                    // closes ClipRRect
-    );                      // closes outer Container
+                      SizedBox(height: 14.h),
+
+                      // ── Watch button ──
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: unlocked
+                                ? Colors.black
+                                : Colors.grey.shade300,
+                            foregroundColor: unlocked
+                                ? Colors.white
+                                : Colors.grey.shade500,
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: unlocked
+                              ? () async {
+                                  debugPrint(
+                                    '[CourseDetail] chapter keys: ${chapter.keys.toList()}',
+                                  );
+                                  debugPrint(
+                                    '[CourseDetail] summary value: ${chapter['summary']}',
+                                  );
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => VideoPlayerScreen(
+                                        chapterId: chapterId,
+                                        chapterName:
+                                            chapter['name'] as String? ?? '',
+                                        videoUrl:
+                                            chapter['video_url'] as String?,
+                                        summary: chapter['summary'] as String?,
+                                        sequenceNumber: sequenceNumber,
+                                        moduleName: widget.moduleName,
+                                        moduleId: widget.moduleId,
+                                        nextChapter:
+                                            index + 1 < _chapters.length
+                                            ? _chapters[index + 1]
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                  // Refresh progress after returning from video
+                                  await _fetchData();
+                                }
+                              : null,
+                          child: Text(
+                            unlocked
+                                ? _buttonLabel(chapterId)
+                                : '🔒  Complete Previous Chapter',
+                            style: TextStyle(
+                              fontSize: AppTheme.smallTextSize.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ), // closes Text
+                        ), // closes ElevatedButton
+                      ), // closes SizedBox
+                    ], // closes Column children
+                  ), // closes Column
+                ), // closes Padding
+              ), // closes Expanded
+            ], // closes Row children
+          ), // closes Row
+        ), // closes IntrinsicHeight
+      ), // closes ClipRRect
+    ); // closes outer Container
   }
 }

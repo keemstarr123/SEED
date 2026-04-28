@@ -17,8 +17,8 @@ class _MyLearningScreenState extends State<MyLearningScreen>
     with TickerProviderStateMixin {
   bool _isLoading = true;
   List<Map<String, dynamic>> _courses = [];
-  List<Map<String, dynamic>> _mandatoryMaterials = [];
-  final int _streakDays = 5;
+  List<Map<String, dynamic>> _ongoingCourses = [];
+  int _streakDays = 0;
 
   // Stacked card state
   List<int> _cardOrder = [];
@@ -57,7 +57,6 @@ class _MyLearningScreenState extends State<MyLearningScreen>
       final supabase = Supabase.instance.client;
       final userId = UserService().currentOwnerId;
 
-      // 1. Fetch all modules with their chapters (id + name + sequence for ordering)
       final modulesRes = await supabase
           .from('micro_modules')
           .select(
@@ -65,17 +64,15 @@ class _MyLearningScreenState extends State<MyLearningScreen>
             'module_chapters(id, name, sequence_number)',
           );
 
-      debugPrint('[Learning] modules fetched: ${(modulesRes as List).length}');
-
-      // 2. Collect every chapter ID across all modules for a single batch query
       final allChapterIds = <String>[
         for (final m in modulesRes as List)
           for (final c in m['module_chapters'] as List)
             if (c['id'] != null) c['id'] as String,
       ];
 
-      // 3. Batch-fetch progress for current user across all chapters
       final progressMap = <String, Map<String, dynamic>>{};
+      int streak = 0;
+
       if (userId != null && allChapterIds.isNotEmpty) {
         final progressRes = await supabase
             .from('video_watch_progress')
@@ -87,25 +84,50 @@ class _MyLearningScreenState extends State<MyLearningScreen>
           final mid = p['module_id'] as String?;
           if (mid != null) progressMap[mid] = p as Map<String, dynamic>;
         }
+
+        // ── Streak calculation ──────────────────────────────────────────────
+        final watchDates = (progressRes as List)
+            .where((p) => p['last_watched_at'] != null)
+            .map((p) {
+              final dt = DateTime.parse(p['last_watched_at'] as String).toLocal();
+              return DateTime(dt.year, dt.month, dt.day);
+            })
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+
+        if (watchDates.isNotEmpty) {
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final yesterday = todayDate.subtract(const Duration(days: 1));
+
+          // Streak is only active if user watched today or yesterday
+          if (watchDates.first == todayDate || watchDates.first == yesterday) {
+            DateTime expected = watchDates.first;
+            for (final date in watchDates) {
+              if (date == expected) {
+                streak++;
+                expected = expected.subtract(const Duration(days: 1));
+              } else {
+                break;
+              }
+            }
+          }
+        }
       }
 
-      // 4. Build courses list + mandatory materials list
       var courses = <Map<String, dynamic>>[];
-      var mandatory = <Map<String, dynamic>>[];
+      var ongoing = <Map<String, dynamic>>[];
 
       for (final m in modulesRes) {
         final rawChapters = List<Map<String, dynamic>>.from(
           (m['module_chapters'] as List).map((c) => c as Map<String, dynamic>),
         );
-
-        // Sort chapters by sequence_number so we always get the right "first" one
         rawChapters.sort(
-          (a, b) => ((a['sequence_number'] as int?) ?? 0).compareTo(
-            (b['sequence_number'] as int?) ?? 0,
-          ),
+          (a, b) => ((a['sequence_number'] as int?) ?? 0)
+              .compareTo((b['sequence_number'] as int?) ?? 0),
         );
 
-        // Average watch_percentage across all chapters → module progress (0–1)
         double totalPct = 0;
         for (final c in rawChapters) {
           totalPct += (progressMap[c['id']]?['watch_percentage'] as num? ?? 0)
@@ -124,33 +146,47 @@ class _MyLearningScreenState extends State<MyLearningScreen>
           'thumbnailUrl': m['thumbnail_url'] as String?,
         });
 
-        // For mandatory modules, surface the first incomplete chapter
-        if (m['is_mandatory'] == true && rawChapters.isNotEmpty) {
-          final firstIncomplete = rawChapters.firstWhere(
-            (c) => progressMap[c['id']]?['is_completed'] != true,
-            orElse: () => rawChapters.first,
-          );
-          mandatory.add({
+        // Ongoing: any chapter has been watched (has progress entry)
+        final watchedChapters = rawChapters
+            .where((c) => progressMap.containsKey(c['id'] as String?))
+            .toList();
+
+        if (watchedChapters.isNotEmpty) {
+          // Find the most recently watched chapter
+          watchedChapters.sort((a, b) {
+            final aDate = progressMap[a['id']]?['last_watched_at'] as String?;
+            final bDate = progressMap[b['id']]?['last_watched_at'] as String?;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return bDate.compareTo(aDate);
+          });
+          final lastChapter = watchedChapters.first;
+          ongoing.add({
+            'moduleId': (m['id'] as String?) ?? '',
             'moduleName': (m['name'] as String?) ?? '',
-            'chapterName':
-                (firstIncomplete['name'] as String?) ??
-                (m['description'] as String?) ??
-                '',
-            'lastVisit':
-                progressMap[firstIncomplete['id']]?['last_watched_at'] as String?,
+            'thumbnailUrl': m['thumbnail_url'] as String?,
+            'chapterName': (lastChapter['name'] as String?) ?? '',
+            'lastVisit': progressMap[lastChapter['id']]?['last_watched_at'] as String?,
+            'progress': avgProgress,
           });
         }
       }
 
-      debugPrint(
-        '[Learning] courses: ${courses.length}, mandatory: ${mandatory.length}',
-      );
+      // Sort ongoing by last watched descending
+      ongoing.sort((a, b) {
+        final aDate = a['lastVisit'] as String?;
+        final bDate = b['lastVisit'] as String?;
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        return bDate.compareTo(aDate);
+      });
 
       if (mounted) {
         setState(() {
           _courses = courses;
-          _mandatoryMaterials = mandatory;
-          _cardOrder = List.generate(mandatory.length, (i) => i);
+          _ongoingCourses = ongoing;
+          _streakDays = streak;
+          _cardOrder = List.generate(ongoing.length, (i) => i);
           _isLoading = false;
         });
       }
@@ -158,17 +194,6 @@ class _MyLearningScreenState extends State<MyLearningScreen>
       debugPrint('[Learning] Error: $e');
       debugPrint('[Learning] Stack: $st');
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  String _formatDate(String? iso) {
-    if (iso == null) return '-';
-    try {
-      final dt = DateTime.parse(iso).toLocal();
-      return '${dt.day}/${dt.month}/${dt.year}';
-    } catch (_) {
-      return '-';
     }
   }
 
@@ -266,11 +291,10 @@ class _MyLearningScreenState extends State<MyLearningScreen>
                     ),
                     SizedBox(height: 24.h),
 
-                    // ── Important Materials ───────────────────────────────────
-                    if (_mandatoryMaterials.isNotEmpty) ...[
+                    // ── Ongoing Courses ───────────────────────────────────
+                    if (_ongoingCourses.isNotEmpty) ...[
                       Text(
-                        'You have ${_mandatoryMaterials.length} important '
-                        'material${_mandatoryMaterials.length > 1 ? 's' : ''}',
+                        'Continue Learning',
                         style: TextStyle(
                           fontSize: AppTheme.normalTextSize.sp,
                           fontWeight: FontWeight.bold,
@@ -348,7 +372,7 @@ class _MyLearningScreenState extends State<MyLearningScreen>
 
   Widget _buildMaterialAtDepth(int depth, double cardHeight, double stackPeek) {
     final bool isActive = depth == 0;
-    final material = _mandatoryMaterials[_cardOrder[depth]];
+    final material = _ongoingCourses[_cardOrder[depth]];
     final double topOffset = depth * stackPeek;
     final double hPad = depth * 10.0.w;
     final double dimOpacity = (depth * 0.22).clamp(0.0, 0.55);
@@ -438,76 +462,108 @@ class _MyLearningScreenState extends State<MyLearningScreen>
   }
 
   Widget _buildMaterialCardFlat(Map<String, dynamic> material) {
-    return Container(
-      padding: EdgeInsets.all(16.r),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    final progress = (material['progress'] as double? ?? 0.0);
+    final pct = (progress * 100).toInt();
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CourseDetailScreen(
+            moduleId: material['moduleId'] as String,
+            moduleName: material['moduleName'] as String,
+            thumbnailUrl: material['thumbnailUrl'] as String?,
+            streakDays: _streakDays,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48.w,
-            height: 48.h,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDE7F6),
-              borderRadius: BorderRadius.circular(12.r),
+        ),
+      ).then((_) => _fetchLearningData()),
+      child: Container(
+        padding: EdgeInsets.all(16.r),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              Icons.menu_book_rounded,
-              color: const Color(0xFF7E57C2),
-              size: 24.sp,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDE7F6),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(
+                Icons.play_circle_rounded,
+                color: const Color(0xFF7E57C2),
+                size: 24.sp,
+              ),
             ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Top: module title
-                Text(
-                  (material['moduleName'] as String?) ?? '',
-                  style: TextStyle(
-                    fontSize: AppTheme.extraSmallTextSize.sp,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    (material['moduleName'] as String?) ?? '',
+                    style: TextStyle(
+                      fontSize: AppTheme.extraSmallTextSize.sp,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 2.h),
-                // Middle: chapter name
-                Text(
-                  (material['chapterName'] as String?) ?? '',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: AppTheme.smallTextSize.sp,
+                  SizedBox(height: 2.h),
+                  Text(
+                    (material['chapterName'] as String?) ?? '',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTheme.smallTextSize.sp,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4.h),
-                // Bottom: last visit date
-                Text(
-                  'Last visit: ${_formatDate(material['lastVisit'] as String?)}',
-                  style: TextStyle(
-                    fontSize: (AppTheme.extraSmallTextSize / 1.3).sp,
-                    color: Colors.grey[400],
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4.r),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.grey[200],
+                            color: const Color(0xFF7E57C2),
+                            minHeight: 4,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        '$pct%',
+                        style: TextStyle(
+                          fontSize: AppTheme.extraSmallTextSize.sp,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF7E57C2),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            SizedBox(width: 8.w),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14.sp, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }

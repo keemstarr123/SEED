@@ -16,6 +16,8 @@ class OrderStatusScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppLayout(
       currentIndex: 0,
+      showNav: false,
+      backgroundColor: Colors.white,
       onNavPressed: (_) => Navigator.of(context).popUntil((r) => r.isFirst),
       body: SafeArea(
         child: Center(

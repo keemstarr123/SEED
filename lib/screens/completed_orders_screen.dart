@@ -62,7 +62,7 @@ class _CompletedOrdersScreenState extends State<CompletedOrdersScreen> {
           .from('orders')
           .select('*, order_details(*, product:products(name, image_url))')
           .eq('business_id', ownerId)
-          .or('transaction_status.eq.completed,transaction_status.eq.completed')
+          .or('transaction_status.eq.completed,transaction_status.eq.Completed')
           .order('created_at', ascending: false);
 
       if (mounted) {
